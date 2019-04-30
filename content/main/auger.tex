@@ -1,0 +1,118 @@
+% !TEX root = ../../thesis.tex
+
+\Subsection{Astroparticle Physics}\label{ssec:app}
+
+A new and unique approach of fitting multi-dimensional data was developed in the context of the \pao{} and is going to be presented in this thesis as the last of the three methods. This section provides an introduction to the physics behind the fit.
+
+The past decade has seen great advances in the research on ultra-high energy particle physics. However, the origin of such highly energetic, natural particles remains unclear as it is hard to backtrack the path of charged particles through the magnetic field of our galaxy. The first sections are going to introduce the known theory behind \glspl{uhecr} while the last part will introduce an observatory for \glspl{uhecr} and its different components.
+
+\Subsubsection{Cosmic Particle Accelerators}
+
+\glspl{uhecr} are particles with energies above \(\SI{e18}{eV}\) and are expected to be extragalactic as there are no known acceleration sites within the Milky Way that could provide such highly energetic particles.~\cite{lastminute}
+
+There are two approaches to explain these macroscopic energy scales of particles. The first class of models is called \emph{top-down} models and are based on the idea that a decay of a super-massive particle can produce relativistic decay products. However, with recent discoveries, these models seem unlikely. Besides postulating instable super-massive particles, they fail to explain the increased fraction of heavier elements and the cutoff at the highest energies as well as the measured photon and neutrino fluxes.~\cite{Letessier-Selvon2011}
+
+Nowadays researchers consider \emph{bottom-up} models more probable which assume that particles get accelerated in an electromagnetic field produced by cosmic objects like pulsars, neutron stars or whole galaxies. Assuming that the particles increase their energy steadily by staying a long time inside such an electromagnetic field one can derive a relation between the maximum energy \(E_{\max}\) when leaving this region, the magnetic field \(B\) of the region, the charge \(Ze\) of the particle and a source efficiency coefficient \(\beta{}\).
+\begin{equation}
+    E_{\max} = \beta Z \left(\frac{B}{\si{\micro \gauss}}\right) \left(\frac{L}{\si{\kilo\parsec}} \right) \si{\exa eV}
+\end{equation}
+This relation, called the \emph{Hillas criterion}, is derived similarly as the computation of the bending magnet strength in a particle accelerator. The requirements for a \gls{uhecr} with an energy of \(E_{\max} = \SI{e20}{eV}\) are visualized in \reffig{hillas}.
+\Figure[opts={width=0.5\textwidth}]{fig/hillas}{\emph{Hillas criterion:} The requirements in terms of size and magnetic field under the assumption of a proton (blue) or iron (green) and an efficiency of \(\beta = 1\) (dashed line is \(\beta = \frac1{300}\)).~\cite{Letessier-Selvon2011}}{hillas}
+With a realistic efficiency of \(\beta = \frac1{300}\) only \glspl{grb} seem a plausible generator of protons with an energy of \(\SI{e20}{eV}\).
+
+The energy spectrum \(N(E) dE \propto E^\gamma dE\) has an observed spectral index of \(\gamma \approx -2.7\) which fits best to a first-order Fermi acceleration process based on a relative energy gain \(\epsilon{}\) per cycle and a corresponding escape probability \(P_{esc}\) resulting in a spectral index of \(\gamma = -1 + \frac{\ln (1-P_{esc})}{\ln (1+\epsilon)}\). With a process for which \(P_{esc}\) and \(\epsilon{}\) both scale with \(\frac{v}c\), like acceleration through strong shockwaves, a simulated spectral index fits well the observed value of \(-2.7\). \todo{-wieso sollte fur gamma exakt -2 rauskommen?}
+
+\Subsubsection{Propagation of Cosmic Rays through the Universe}
+
+The propagation of \gls{cr} is mainly influenced by particle interactions in space and the deflection by magnetic fields. Effects from gravitation can be safely neglected as this force is too weak and electric field components do not exist in open space.
+
+\paragraph{Particle interactions}
+
+The only relevant particles in space are photons as other particles have insignificant densities in open space with respect to their interaction cross section. The most important contribution is given by the \gls{cmb} which provides enough energy to take part in a photo-pion or electron-positron production when blue-shifted into the rest frame of the \gls{uhecr}.
+\begin{align}
+    p + \gamma_{CMB} &\rightarrow \Delta^+ \rightarrow
+    \begin{cases}
+        p + \pi^0 \\
+        n + \pi^+
+    \end{cases} \\
+    p + \gamma_{CMB} &\rightarrow p + e^+ + e^-
+\end{align}
+This is called the GZK-effect named after K. Greisen, G. Zatsepin and W. Kuzmin~\cite{Greisen1966, Zatsepin1966}.
+
+For \glspl{cr} over \SI{10}{\exa{}eV} the photo-pion production is dominant. Using the mean energy of \gls{cmb} photons and the mass of \(\Delta^+\) and one can deduce an energy threshold for an efficient pion production in case of a proton \gls{cr}:
+\begin{equation}
+    E_{\min} = \frac{m_\Delta^2 - m_p^2}{4 E_{CMB}} \approx \SI{2.7e20}{eV}
+\end{equation}
+This number just a rough approximation of the order of magnitude, as the exact numerical value is expected to be much smaller due to a large number of \gls{cmb} photons having much larger energies than the mean \(\langle E_{CMB} \rangle \approx \SI{6e-4}{eV}\). The overall energy loss can be simulated (see \reffig{gzk}) and makes the \emph{GZK horizon} visible: \gls{uhecr} protons traveling for more than \SI{100}{\mega\parsec} will never arrive at Earth with an energy higher than \SI{e20}{eV}. Thus, the sources of \glspl{uhecr} are expected to be nearby and consequently show some anisotropic behavior.
+\Figure[opts={width=0.7\textwidth}]{fig/gzk-horizon}{\emph{GZK horizon:} The mean energy of a proton as a function of the traveled distance due to interactions with the \gls{cmb}.~\cite{Kumpel2011}}{gzk}
+
+\paragraph{Magnetic deflection} of charged particles occurs in strong magnetic fields. The extragalactic magnetic field is not well known but seems to be weak (\(\approx \SI{1}{\nano\gauss}\)) and only close to galaxy clusters up to \(\SI{10}{\micro \gauss}\). The coherence length is of the order of a few \(\si{\mega \parsec}\) and therefore much smaller than the Gyro radius of the \glspl{uhecr}, thus leading to a neglectable deflection.
+
+Overall the deflection through extragalactic magnetic fields is expected to be relatively small compared to the ones experienced inside our own galaxy. The total field strength close to our solar system is \SIrange{5}{6}{\micro\gauss} leading therefore to deflection angles from a few degrees up to tens of degrees scaling roughly proportional to the inverse \(\frac1R=\frac1{\SI{60}{\exa\volt}}\ldots\frac1{\SI{6}{\exa\volt}}\) of the magnetic rigidity \begin{equation}
+    R = \frac{E}{Z e}
+\end{equation} of the \gls{cr}~\cite{Opher2013}. More on the galactic magnetic field is presented in the upcoming section.
+
+\Subsubsection{Galactic Magnetic Field}\label{sssec:jf12}
+
+To predict particle trajectories through our galaxy and also being able to reconstruct extragalactic origins of measured \glspl{uhecr} is an important task in Astroparticle Physics. The previous section has shown that inside our own galaxy the dominant component for the \gls{cr} path is the galactic magnetic field.
+
+Based on observations of other spiral galaxies we have a rough idea of the structure of the galactic field. However, as the Earth is inside the galactic disk there is no top-view information about the Milky Way available. The only information about the field can be inferred from a line of sight measurements which results in high uncertainties. There are different methods that can provide such measurements, e.g.\ optical polarization data, polarized synchrotron radiation and Zeeman spectral-line splitting in gaseous clouds with the Faraday rotation measurements providing the most informative data.~\cite{Beck2015}
+
+The measurements show that the magnetic field consists of a regular large-scale field and a turbulent component with a coherence length of around \SIrange{50}{150}{\parsec}~\cite{Prouza2003}. The turbulent component can be modeled through a Gaussian blurring for the purpose of \gls{uhecr} deflections as the scale of coherence is too small compared to the Gyro radius (which is roughly proportional to \(R\)).
+
+The regular component of the field can be modeled in different ways and the corresponding parameters fitted to the observed data. One of these is the Jansson and Farrar model~\cite{Jansson2012} (referred to as the JF12 field) which was published 2012 and re-analyzed on more recent data from Faraday rotations and synchrotron emissions. Its structure is based on observations of other spiral galaxies and, therefore, consisting of a spiral disk field with 10 parameters, a halo field with 6 degrees of freedom and another 4 for an X-shape field, resulting in 20 free parameters. Another commonly used model is named after Pshirkov and Tinyakov (PT11)~\cite{Pshirkov2011} and is only based on Faraday rotations. In \reffig{jf12-pt11} the measured data is compared to the model predictions and clearly shows, that PT11 does not describe the synchrotron observations as well as JF12. For \gls{cr} with a high rigidity and paths perpendicular to the galactic disk these models provide good agreement, however for lower rigidities or flight paths inside the galactic plane, the exact modeling plays a more significant role and the model predictions do not coincide.
+\Figure{fig/jf12-pt11}{Models of the galactic magnetic field. \emph{Left to right:} Faraday rotation measurements, Stokes parameters \(Q\) and \(U\) for the synchrotron emission. \emph{Top to bottom:} Data, JF12 simulated, PT11 simulated maps.~\cite{Farrar2015}}{jf12-pt11}
+
+In conclusion, the JF12 provides a good description of observed data based on a reasonable model. However, it is not yet validated and should be considered a best guess, especially because of the discrepancies with respect to PT11.
+
+\Subsubsection{Extensive Air Showers}
+
+\glspl{uhecr} are quite rare (\SI{5}{\per\square\kilo\meter\per\annum} \glspl{cr} with \(E > \SI{e19}{eV}\)) making it intractable to measure them in space. In the Earth's atmosphere, these primary particles start to develop showers of secondary particles which partially arrive on the surface covering large areas and, therefore, making it feasible to detect and measure the \glspl{uhecr} indirectly through their shower development. Thus, modern observatories for \glspl{uhecr} like the \pao{} and the \emph{Telescope Array} are built over large areas with a relatively sparse filling of the detector elements.
+
+The \glspl{eas} are created by consecutive particle interactions between the primary particle and air molecules producing secondary particles, as well as by secondary particles further decaying and interacting with the air. The emerging air shower consists mostly of a muonic, an electromagnetic and a hadronic component (see \reffig{eas}).
+\Figure[opts={width=0.7\textwidth}]{fig/eas}{Schematic view of the development of an \gls{eas} and the decay processes of the 3 components.~\cite{Keilhauer2004}}{eas}
+
+It is important to note that the longitudinal development of the \gls{eas} is not depending on the traveled distance but the passed particle density \(\rho(h)\) which depends on the vertical height above sea level. This notion is condensed into the definition of the \emph{atmospheric depth}\begin{equation}
+    X(h)=\int_h^\infty \rho(h') dh' .
+\end{equation}
+
+The \emph{Heitler model} describes the electromagnetic cascade through a deterministic process of electrons and photons decaying into two particles (Bremsstrahlung and electron-positron pair production) after traveling through a fixed atmospheric depth \(X_\text{step}\). In each of the decays, the energy of the initial particle is divided evenly on the two daughter particles (see \reffig{heitler}). The shower development stops when the energy of the particles falls below a critical value \(E_C\) making the decays non-efficient and resulting in an estimation of the atmospheric shower depth traveled until the shower reached its maximum size.
+\begin{align}
+    E_C &\approx E_{n_{\max}} = \frac{E_0}{2^{n_{\max}}}\\
+    X_{\max} &= n_{\max} X_\text{step} = \log_2 \left( \frac{E_0}{E_C}\right) X_\text{step}
+\end{align}
+\Figure[opts={width=0.5\textwidth}]{fig/heitler}{Heitler model of the electromagnetic cascade. It is assumed that at every decay the energy distributes evenly on the two daughter particles.~\cite{Matthews2005}}{heitler}
+However, as this is a simplified model not even considering the muonic and hadronic components it gives only a rough idea of the scaling between \(X_{\max}\) and the initial energy \(E_0\). For a more accurate description, computational shower simulations are performed.
+
+\Subsubsection{The Pierre Auger Observatory}\label{sssec:pao}
+
+The \pao{} is the worlds largest detector for \glspl{uhecr} covering an area of roughly \SI{3000}{\square\kilo\meter} in Pampa Amarilla, Argentina (see \reffig{auger}). Most of the area is covered by two types of detectors complementing each other.~\cite{ThePierreAugerCollaboration2016}
+\Figure[opts={width=0.6\textwidth}]{fig/auger}{The \pao{} with the positions of the \gls{fd} (blue) and the \gls{sd} (black). Additional detectors for lower energies are also located on the left (\gls{heat}, \gls{aera}).~\cite{ThePierreAugerCollaboration2016}}{auger}
+
+\paragraph{Surface Detector}
+
+One component of the observatory is the \gls{sd} which comprises of 1660 water Cherenkov stations. They are situated on a hexagonal lattice with a separation distance of \SI{1.5}{\kilo\meter} covering the complete area (see \reffig{auger}). Each of these stations contains \SI{12000}{\litre} water in which Cherenkov radiation of penetrating relativistic charged particles is induced. With the stations being lightproof and reflective from the inside, the 3 \glspl{pmt} installed in each of the stations can easily detect this radiation. As a shower typically hits 10 to 30 stations at once, the slightly different arrival times between the tanks can be used to reconstruct the arrival direction of the shower front which coincides with the direction of the primary particle (see \reffig{sd}). The number of triggered stations gives relates to the energy of the \gls{cr} and performing a cross-calibration with the \gls{fd} results in an energy resolution of \(10\%{}\) to \(24\%{}\).
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.4\textwidth}
+        \incgfx{width=\textwidth}{fig/auger-sd}
+    \end{minipage}\ind{}
+    \begin{minipage}{0.5\textwidth}
+        \incgfx{width=\textwidth}{fig/auger-sd-fd}
+    \end{minipage}
+    \caption{\emph{Left:} Sketch of an \gls{sd} station.~\cite{Keilhauer2004} \emph{Right:} Visualization of a shower front measurement by the \gls{sd} and the \gls{fd} (lower right corner).~\cite{Collaboration}}\label{fig:sd}
+\end{figure}
+
+\paragraph{Fluorescence Detector}
+
+The \gls{fd} consists of 4 telescopes observing the air volume above the \gls{sd} (see \reffig{auger}). These telescopes measure fluorescence light emitted from excited nitrogen molecules. Thus, they are able to reconstruct the shower profile in the air and can also correctly predict the incoming direction of the \gls{cr}. This is done in two steps. First, the geometric shower detector plane is computed using a line fit of the activated pixels in the telescope. Afterward, the arrival times of the photons can be used to determine the angle of the shower inside this plane (see \reffig{auger-fd}). The longitudinal profile including information on \(X_{\max}\) can be used to reconstruct an energy estimate. Therefore, the \gls{fd} and the \gls{sd} complement each other very well. The downside of the \gls{fd} is, that it needs to be highly sensitive to the fluorescence light and can only be operated in the dark with a clear sky resulting in an average uptime of \(13\%{}\).
+\begin{figure}[t!]
+    \centering
+    \begin{minipage}{0.4\textwidth}
+        \incgfx{width=\textwidth}{fig/auger-sdp}
+    \end{minipage}\ind{}
+    \begin{minipage}{0.5\textwidth}
+        \incgfx{width=\textwidth}{fig/auger-fd}
+    \end{minipage}
+    \caption{Schematic view of how the shower direction can be reconstructed with the \gls{fd}. \emph{Left:} Visualization of the shower plane and the arrival times of photons.~\cite{Abraham2010} \emph{Right:} Data from a fluorescence telescope showing the shower plane. The colors indicate arrival times, which are used to estimate the direction inside the shower plane.~\cite{Kumpel2011}}\label{fig:auger-fd}
+\end{figure}

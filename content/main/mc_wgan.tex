@@ -1,0 +1,272 @@
+% !TEX root = ../../thesis.tex
+
+\Section{Event Simulation with Generative Adversarial Networks}\label{sec:mcwgan}
+
+As discussed in \refsssec{mc} for the \gls{cms} experiment, simulated events with a known ground truth are important for developing and optimizing discriminators in modern physics analyses.
+
+Such a simulation of events in the \gls{cms} detector is computationally expensive and requires several seconds of computation time per event~\cite{cms-fastsim}. The future upgrade of the \gls{lhc} becoming the \gls{hllhc} and the resulting higher event yield will lead to a proportionally higher request of \gls{mc} events for new analyses. Simultaneously, more CPU power needs to be spent on data selection and reconstruction resulting in an expected future computing resources requirement far greater than the anticipated increase through Moore's Law or new computing architectures~\cite{computingchallenges}. Thus, a lot of research is done for finding solutions to this challenge for example by producing \gls{mc} events in a more efficient way.
+
+With the recent successes of \glspl{gan} and \glspl{cnn} first steps were taken by applying these methods and creating a \gls{dl} version of a calorimetric shower simulation~\cite{calogan}. The publication presented promising results including speedups of up to 5 orders of magnitude compared to a traditional \geant{} simulation.
+
+In this section, an improved version of the traditional \gls{gan} will be applied to the task of simulating not shower images but directly the high-level physics observables for an event. This investigation stands in stark contrast to most other \gls{gan} applications with respect to the type of data as it is very unusual to deploy \glspl{gan} on non-image data. Probably one of the main reasons for this is the fact that image-like data with geometric structure is the only high-dimensional data humans can grasp and evaluate quite easily, therefore, being able to check and validate the approach of a generative model.
+
+The high-level physics observables cannot be easily visualized for humans to make it obvious which events are physical and which are not. Additionally, it is much more important, that the exact data distribution is recreated instead of only producing a subset of events. Therefore, some metrics are introduced to evaluate the generative models of this approach in a comprehensible and quantitive way.
+
+The following section will first present a generalized formulation of the task. Afterward, the \gls{wgan} will be presented and its way of functioning explained. Finally, three metrics are introduced to evaluate the trained models.
+
+\Subsection{Generalization}
+
+The task is to produce a dataset consisting of entries (=events) which themselves consist of a fixed set of numerical features (=physics observables). These data entries shall follow a certain high-dimensional phase space distribution according to a given physics model. This is usually achieved by encoding the physics model in an algorithmic implementation (e.g.\ \geant{}) which takes some random seed value and produces deterministically these events.
+
+The goal is to translate the encoded physics model into a \gls{dnn} which takes something similar to a random seed as input and produces the events with its observables as output. The \gls{mc} simulation is used to produce a big enough amount of data indirectly encoding the target phase space distribution. This dataset is then used to train a \gls{gan} and therefore encoding the physics into the \gls{dnn}.
+
+For evaluating the trained model its generated data will be compared to the original training events using different statistical metrics.
+
+\Subsection{Improved Wasserstein-GAN}
+
+First investigations producing \gls{mc} simulated data using \gls{dl} were performed using the originally proposed \gls{gan} (see \refsssec{gan}) without any modifications. Two main issues were immediately observed:
+
+\begin{description}
+\item[Training Instability] It was important that none of the two involved networks could easily outperform the other. More often this happened to be the discriminator easily identifying unrealistic data as `fake' in larger phase space regions and therefore providing the generator network with no helpful information on how to improve. This often leads to a stagnation of the training before the generator network could even come close to a good solution.
+\item[Mode Collapsing] The generator network tends to produce very similar looking events and completely ignoring other phase space regions which are populated in the training data. This phenomenon is called mode collapsing and arises due to the fact that the generator loss is not effectively punishing this behavior.
+\end{description}
+
+Both problems were observed by many others in the \gls{ml} community and got addressed by more recent publications. Two contributions lead to the very promising \gls{wgan}~\cite{wgan, impwgan} by making an important key observation. The \gls{gan} does not specifically incorporate a metric over the dimensions of the phase space leading to rather meaningless gradients for the generator network (see \reffig{gan-issue}). The following sections are going to introduce such a metric and translate it to a \gls{dl} approach.
+
+\Subsubsection{Wasserstein Distance}\label{sssec:wasserstein}
+
+The Wasserstein distance is a measure between two \(N\)-dimensional probability distributions \(P_{\bm a}\) and \(P_{\bm b}\) and assesses their similarity.
+Another name for this distance is earth mover's distance better describing the way it behaves by imagining \(P_{\bm a}\) as a distribution of earth heaps and \(P_{\bm b}\) as targets or holes that need to be filled.
+There always exists an optimal transport plan according to which the work that needs to be done to move the earth to the holes is minimized (e.g.\ see \reffig{wasserstein-earth}).
+In mathematical notation, such a transport plan \(\gamma \) is an element of all possible transport plans between \(P_{\bm a}\), \(P_{\bm b}\) which can be written as \begin{equation}
+    \gamma \in \Pi (P_{\bm a}, P_{\bm b})
+\end{equation} and is basically encoded as an \(N+N\)-dimensional probability distribution specifying the probability of taking the path from \(\bm{a}\) to \(\bm{b}\).
+This results in the notation \begin{equation}
+    \mathbb{E}_{(\bm a, \bm b) \sim \gamma} \; || \bm a - \bm b ||_2
+\end{equation}
+describing the work that needs to be done for a given transport plan \(\gamma \). In analogy to the earth heap interpretation, the expectation value is the earth mass moved and the vector norm is the distance that needs to be covered. The formal definition of the Wasserstein distance is then \begin{equation}
+    D_W = \overbrace{\min_{\gamma \in \Pi (P_{\bm a}, P_{\bm b})}}^\text{optimal transport} \overbrace{\mathbb{E}_{(\bm a, \bm b) \sim \gamma}}^\text{mass} \overbrace{|| \bm a - \bm b ||_2}^\text{Euclidean distance} .
+\end{equation}
+
+The Wasserstein distance is by this definition a proper distance measure between two probability distributions in the mathematical sense as it fulfills the four metric conditions, them being:
+\begin{itemize}
+\item Non-negativity: \(D_W(P_{\bm a}, P_{\bm b}) \geq 0\)
+\item Identity of indiscernibles: \(D_W(P_{\bm a}, P_{\bm b}) = 0 \Leftrightarrow P_{\bm a} = P_{\bm b}\)
+\item Symmetry: \(D_W(P_{\bm a}, P_{\bm b}) = D_W(P_{\bm b}, P_{\bm a})\)
+\item Triangle inequality: \(D_W(P_{\bm a}, P_{\bm c}) \leq D_W(P_{\bm a}, P_{\bm b}) + D_W(P_{\bm b}, P_{\bm c})\)
+\end{itemize}
+This encourages to think of the \(D_W\) as a distance. However, there might be some points about it that seem counter-intuitive. One example is the scaling of this distance. It is clear that the distance gets bigger with more local differences between two distributions. But having two distributions with the same \(D_W\) to some reference distribution does not mean that humans looking at some visual representation would necessarily classify them as being equally far away from the reference. A reason could be that one variable is much larger than the others and therefore dominating the numerical value of \(D_W\) while this dominating effect might not be visible in a visual representation where all variable axes were scaled. This leads again to the important point of normalizing data before processing it with \glspl{dnn}.
+
+The presented definition of \(D_W\) is very intractable because of the minimum computed over all transport plans. To actually make the \gls{wgan} work one needs the Kantorovich-Rubinstein duality. \begin{equation}
+    D_W = \max_{C \in \text{Lip}_1} - \mathbb{E}_{\bm a \sim P_{\bm a}}\; C(\bm a) + \mathbb{E}_{\bm b \sim P_{\bm b}}\; C(\bm b)
+\end{equation}
+This formula makes use of the Lipschitz continuity
+\begin{equation}
+    \text{Lip}_k = \{f \in \text{continuous differentiable functions} \ |\  \forall \bm x \in \mathbb{R}^N : ||f'(\bm x)||_2 \leq k\}.
+\end{equation}
+The duality states that the Wasserstein distance can be computed as a maximum over a set of functions with these functions being later on one of the networks called the critic (as opposed to the discriminator in the \gls{gan} setup). As an example of how this function \(C\) might look like it is visualized for the 2D case in \reffig{wasserstein-duality}. It is clearly visible how this function provides the gradients to push the blue distribution exactly along the optimal transport path if used in a gradient descent approach.
+
+\begin{figure}
+\begin{minipage}{0.47\textwidth}
+\includegraphics[width=\textwidth]{fig/wasserstein-earth.pdf}
+\caption{Optimal transport plan: The blue dots are the earth heaps and marked in green is the target distribution. The red arrows mark the optimal transport plan with numbers denoting the amount of mass moved along them. The work and therefore the Wasserstein distance is the sum over all arrow weights multiplied by their path length, respectively.}\label{fig:wasserstein-earth}
+\end{minipage}
+\begin{minipage}{0.06\textwidth}
+\
+\end{minipage}
+\begin{minipage}[r]{0.47\textwidth}
+\includegraphics[trim={0 -20 0 -20},clip,width=\textwidth]{fig/wasserstein-duality.pdf}
+\caption{Demonstration of the (trained, close to optimal) critic function \(C\) over \(\mathbb{R}^2\) having gradients bounded by 1 (\(\text{Lip}_1\), visible through equidistant contour lines). The Wasserstein distance is \(C(\text{green}) - C(\text{blue})\). Gradients of \(C\) should always be parallel to the optimal transport paths (red paths on the left) and perpendicular to the shown contour lines.}\label{fig:wasserstein-duality}
+\end{minipage}
+\end{figure}
+
+
+\Subsubsection{Critic replaces Discriminator}
+The only thing that needs changing compared to the traditional \gls{gan} (\refsssec{gan}) to arrive at the \gls{wgan} is the loss function of the discriminator network effectively turning the discriminator into a critic network and the output of this network is the function \(C\). The used loss is \begin{equation}
+    \loss{W} = \mathbb{E}_{\bm a \sim P_{\bm a}}\; C(\bm a) - \mathbb{E}_{\bm b \sim P_{\bm b}} \;C(\bm b).
+\end{equation}
+Because training minimizes this loss one obtains a critic network approximating the optimal critic function and the loss is converging towards the value of the negative Wasserstein distance.
+\begin{multline}
+    \loss{W} \to \min_{C \in \text{Lip}_1} \mathbb{E}_{\bm a \sim P_{\bm a}} C(\bm a) - \mathbb{E}_{\bm b \sim P_{\bm b}} C(\bm b) \\= - \max_{C \in \text{Lip}_1} - \mathbb{E}_{\bm a \sim P_{\bm a}} C(\bm a) + \mathbb{E}_{\bm b \sim P_{\bm b}} C(\bm b) = - D_W
+\end{multline}
+However, just training with the aforementioned loss does not guarantee that the resulting function will be 1-Lipschitz continuous. As opposed to the first \gls{wgan} proposal the Improved \gls{wgan} uses a gradient penalty term in the loss enforcing this condition instead of clipping network weights. This has multiple positive effects. First of all the performance has proven to be better in real-world applications using the gradient penalty. Another disadvantage of the weight clipping method is the non-trivial interpretation of the Wasserstein loss as it now converges not towards the actual Wasserstein distance but a scaled value\footnote{This is due to the fact that the weight clipping ensures Lipschitz continuity by bounding the gradient to some arbitrary value \(k\) instead of 1. This \(k\) is exactly the amount by which the value of the loss is scaled compared to \(D_W\).} with this scale depending heavily on the network structure (number of layers, activation function, etc.).
+
+The gradient penalty loss term is given originally by
+\begin{equation}\label{eq:gp}
+\loss{GP} = \mathbb{E}_{\bm x \sim \overline{P_{\bm a} P_{\bm b}}}\; {(||C'(\bm x)||_2 - 1)}^2
+\end{equation}
+where an unconventional notation \(\bm x \sim \overline{P_{\bm a} P_{\bm b}}\) was used to denote a uniform randomly drawn \(\bm x\) from a random connecting line between an element from \(P_{\bm a}\) and \(P_{\bm b}\) or more formal \(\bm x = \epsilon \bm a + (1-\epsilon) \bm b\) with \(\epsilon \sim U(0, 1)\), \(\bm a \sim P_{\bm a}\), \(\bm b \sim P_{\bm b}\).
+This loss is implemented by an element-wise linear combination of the two provided samples \(\bm a\) and \(\bm b\) and a randomly drawn \(\epsilon \) for every sample.
+
+The Lipschitz condition itself is not directly forcing the gradient to be exactly 1. The reason why this loss actually provides a stronger constraint than necessary is that in theory, the converged critic function has everywhere a gradient of exactly 1 except for a null set. Another possibility of a gradient penalty matching closer the Lipschitz condition would be
+\begin{equation} \label{eq:gpmax}
+\loss{GP} = \mathbb{E}_{\bm x \in \overline{P_{\bm a} P_{\bm b}}} \;{\left[\max(0, ||C'(\bm x)||_2 - 1)\right]}^2
+\end{equation}
+only penalizing gradients that are actually larger than 1. During experimentation, it was found that the second version of the gradient penalty behaved similarly to the first version at the beginning of the training. In the final stages, however, the second version had a better convergence behavior (less noise, same minimal loss value) compared to the loss term proposed by the authors of~\cite{impwgan}. A possible explanation of this behavior would be that the generator produces already samples close to the real data and the critic is almost constant everywhere while also trying to have a gradient of 1 in the case of \refeq{gp}. A function satisfying both conditions does not exist and therefore the critic is close to a constant function with a large amount of noise to provide the gradients of 1. In the case of \refeq{gpmax} the critic network can smoothly approach the constant function resulting in a more stable training and loss curve. For the following evaluations the gradient penalty from \refeq{gpmax} was used and the critic network was trained with the complete loss of \(\loss{C} = \loss{W} + \kappa_{GP} \loss{GP}\) with \(\kappa_{GP}\) being a tunable hyperparameter.
+
+Figure~\ref{fig:gan-issue} visualizes how the concept of a critic mitigates the issues of a traditional \gls{gan}. Clearly, the training instability is resolved. The critic can be in a converged state and still give a meaningful gradient over the data phase space. In this regard, a fully trained discriminator fails. In fact, the training routine for the presented \gls{wgan} setup leverages this by training the critic much more often than the generator network to ensure a high quality of critic gradients. The mode collapsing is a bit harder to explain and there is some theoretical work published on this (e.g.~\cite{dragan}). The essential difference is that the critic is more globally informative. In \reffig{gan-issue} the critic splits the fake blue distribution close to 0 by providing different gradients for the points on the left of this threshold compared to the points on the right. This is exactly the point at which the left blue distribution matches the size of the left green distribution. The right blue side can exactly fill up the right green peak. This kind of behavior makes it impossible to move all data points on to one single point. In contrast, the discriminator only evaluates locally the ratio between fake and real data without taking into account if there is enough generated data in the region or not. This can and in practice often does result in mode collapsing and this collapsed mode given by the generator is then playing a pointless cat-and-mouse game with the discriminator afterward.
+\Figure[opts={width=0.7\textwidth}]{fig/gan-issue}{A toy example of generated (fake) data and training (real) data. The discriminator and critic are computed numerically by evaluating exactly the minimum of the corresponding losses (possible in this simple 1D case). The graph shows clearly the vanishing gradient of the discriminator for most of the fake samples. The critic provides everywhere a good description of how to improve the fake data distribution.}{gan-issue}
+
+\Subsection{Training and Data Setup}
+
+Before looking at the results of this model, this section will give some information on the technical aspects of this setup like the specific network structure and training procedure that was used, the preprocessing of the data and the concrete datasets that were used.
+
+\Subsubsection{Wasserstein-GAN Architecture and Training}
+
+As the used data has no structure that could be easily exploited with existing network layouts multiple dense layers were used. A hyperparameter search revealed that the size is not extremely critical for the performance. Both networks (generator and critic) became the same structure as the overall complexity is always limited by one of the networks (bottleneck). Each network consisted of 6 hidden layers \`a 288 nodes. Thus, for the updates to the first layer of the generator the gradient had to flow through 12 layers in the backpropagation step.
+
+The latent space for the generator consisted of 128 standard normal distributed values. The dimensionality of the latent space had no significant impact on the performance.
+
+A few common activation functions (see \refsssec{backpropagation}) were compared with the \gls{relu} which in the end performed significantly better than the others.
+
+The critic was trained with the complete loss function presented in the previous section and a scaling of the gradient penalty loss of \(\kappa_{GP}=10\) (also robust with respect to the performance). The generator is trained on the critic output with the opposite sign compared to the critic loss:
+\begin{align}
+    &&\loss{W} &= \mathbb{E}_{\bm t \sim P_\text{train}} C(\bm t) \bm - \mathbb{E}_{\bm g \sim P_\text{gen}} C(\bm g)\\
+    &\Rightarrow&\loss{G} &=\phantom{\mathbb{E}_{\bm t \sim P_\text{train}} C(\bm t)} \bm + \mathbb{E}_{\bm z \sim P_{\bm z}} C(G(\bm z))
+\end{align}
+
+As an optimizer, the Adam algorithm performed slightly better than the others with the default learning rate of 0.001 and a batch size of 256.
+
+The critic was trained until convergence\footnote{The convergence criterion was met when 32 consecutive update steps were performed which did not improve the loss \(\loss{C}\) on validation data.} before each training step of the generator.
+
+All these hyperparameters where optimized on a validation set. As the number of hyperparameters is small and most of them did not significantly influence the performance with respect to a reasonable range of values the performance values are not reported on a separate test set. Instead, a resampling of the training and validation data was performed and the performance reported on this new validation set as the bias is to be expected much smaller than the fluctuations between individual trainings.
+
+\Subsubsection{Preprocessing and Shape Normalization}
+
+First experiments have shown that \glspl{gan}, in general, are not very good in reproducing shapes of histograms, especially if these shapes have distinct features (e.g.\ the peaks for low and high CSV values). This gave the reason for taking another look at the normalization of data (see \refsssec{normalization}). Instead of normalizing the position and the spread of the data one could directly perform some kind of shape normalization to match it exactly to a normal distribution. This was actually done for the upcoming task yielding much better results. The principle of how it works is depicted in \reffig{shape-normalization}. The transform function \(T_X(x)\) for a specific variable \(X\) is given by \begin{equation}
+    T_X(x) = \Phi^{-1}(F_X(x))
+\end{equation}
+where \(\Phi(x)\) is the \gls{cdf} for the normal distribution and \(F_X(x)\) is the \gls{cdf} for the distribution of the variable \(X\). The value \(p=F_X(x)\) is mapping a value \(x\) to the corresponding percentile \(p\) which then, in turn, can be converted to a standard normal distributed value \(T_X(X) = \Phi^{-1}(p)\) using the inverse normal \gls{cdf}. Analogously the inverse of this transform is \begin{equation}
+    T_X^{-1}(x) = F_X^{-1}(\Phi(x)).
+\end{equation}
+\Figure{fig/shape-normalization}{Process of shape normalization: \emph{Left:} The transformation \(T_X\) uses the cumulative distribution function of \(X\) to transform the complete value distribution into a standard normal distribution. \emph{Right:} The transformation \(T^{-1}_X\) transforms a standard normal distribution into the data distribution of \(X\) using the inverse cumulative distribution function of \(X\).}{shape-normalization}
+
+An important remark about this method is that the function \(F_X(x)\) is just given by data points and therefore represents a step function (see \reffig{cdf}). This has two issues. Using a step function in the process of transforming the data from a normal distribution back to the original one (\(T_X^{-1}\)) results in a distribution consisting only of previously existing values in \(X\). The second issue is also regarding the back transformation and data limits. It would be impossible to get larger values than the maximum or smaller values than the minimum observed in the data of \(X\). Both issues are problematic with respect to the \gls{wgan}'s goal of mimicking the given data distribution but not exactly copying it. However, two small adaptations to \(F_X\) can be made (shown in \reffig{cdf}). First, one simply interpolates between the steps instead of actually using the step shape. Secondly, at the minimum value and maximum value, the \gls{cdf} is extended with a simple exponential function (three free parameters) fixed by the value (x, y removes 2 degrees of freedom) and the gradient of the first or last line of the interpolation (removes the last DOF).
+\Figure[opts={width=0.7\textwidth}]{fig/cdf}{Modified cumulative distribution function of \(X\). The linear interpolation and the exponential extensions on the left and the right ensure that the inverse cumulative distribution function is well-defined and can map onto any real number.}{cdf}
+
+\Subsubsection{Datasets}
+
+To not only quantitatively (values of the metrics) but also qualitatively (comparison of different values of the same metric) assess and compare the generated data it is helpful for having some dataset that behaves worse than the \gls{wgan}-generated data and one that behaves better. The better dataset will be the training data itself. This is not really a solution to the formulated goals as copying the data is not viable, however, for assessing other aspects and qualities of data distributions the train data can just be split into two equal-sized sets to provide two different datasets with the same general phase space density. One of these two takes the role of being the training data while the other set takes the role of the idealized generated data. A very simple and therefore worse generation of data using the train data would be simply sampling from the variables independently without taking care of correlations between different observables. This is practically done by sampling from a standard normal distribution and using the inverse transform from the previous section to get a continuously distributed variable value. This dataset then will match perfectly one-dimensional histograms, but every higher correlation will be completely destroyed which is why it should have in general a lower quality than \gls{wgan}-generated data. In the following, it will be called the decorrelated data.
+
+\newcommand{\signal}{\(t \bar t H\)}
+\newcommand{\background}{\(t \bar t b \bar b\)}
+The training datasets themselves were generated using \pythiaDelphes{} (see \refsssec{mc}). For the following results, 4 datasets were used in total. 2 of them had 32 low-level physics observables which were just the momentum four vectors of eight jets\footnote{Bhad, Bj1, Bj2, Blep, Lj1, Lj2, Lep1, Nu1}. These jets were ordered according to their origin on the tree level generator output. The other two datasets consist of 26 high-level variables (see \refapp{highlevelvars} for a list of these variables). From each of the high-level and low-level category there exist two datasets one being a signal dataset containing only events generated by the process of \(gg \rightarrow t\bar t H \rightarrow t \bar t b \bar b\) and the other being the corresponding dominant background process dataset containing events generated by the process of \(gg \rightarrow t\bar t b\bar b\). In both cases, it was required that the top quarks decayed semileptonic (one hadronic \(t \rightarrow bW \rightarrow b q q'\), one leptonic \(t \rightarrow bW \rightarrow b l \nu{}\)). In the following section, it will be clearly stated at which point which of these four datasets are used using the terminology of high-level/low-level and \signal{}/\background{} (signal/background).
+
+
+\Subsection{Metrics and Results}
+
+The goal of this section is to evaluate the \gls{wgan}-generated data compared to the two other benchmark datasets defined in the previous section. As this is one of the first investigations of a \gls{wgan} applied to non-image data the quality cannot be assessed in any similar way as has been done for image data used in almost any application of a \gls{wgan}. Before going into more details one can look at the 1-dimensional histograms over some of the variables for the three datasets (presented in \reffig{1dhistoshighlevel},~\ref{fig:1dhistoslowlevel}). As can be seen even with the shape normalization the \gls{wgan} struggles a bit in reproducing the exact histogram distribution.
+
+
+\begin{figure}[ht!]
+\begin{minipage}{0.49\textwidth}
+\includegraphics[width=\textwidth]{fig/fox_wolfram_2_40.pdf}
+\end{minipage}
+\begin{minipage}[r]{0.51\textwidth}
+\includegraphics[width=\textwidth]{fig/jet_closest_pair_mass_40.pdf}
+\end{minipage}
+\caption{Variable histograms: The blue curve denotes the \gls{mc} for the high-level \signal{} dataset. The yellow curve denotes the \gls{wgan}-generated data. The green curve is showing the histogram for the decorrelated dataset. As by construction, the decorrelated dataset fits nicely the distribution of the training data in blue. Left- and rightmost bins contain also overflow samples.}\label{fig:1dhistoshighlevel}
+\end{figure}
+
+\begin{figure}[ht!]
+\begin{minipage}{0.5\textwidth}
+\includegraphics[width=\textwidth]{fig/best_bhad__E_40.pdf}
+\end{minipage}
+\begin{minipage}[r]{0.5\textwidth}
+\includegraphics[width=\textwidth]{fig/best_bhad__Py_40.pdf}
+\end{minipage}
+\caption{These plots show the same as \reffig{1dhistoshighlevel} but for the low-level \signal{} dataset instead of the high-level one.}\label{fig:1dhistoslowlevel}
+\end{figure}
+
+\Subsubsection{Wasserstein Distance as Metric}
+
+Section~\ref{sssec:wasserstein} already explained the behavior of the Wasserstein distance as a metric between two data distributions. The training of the \gls{wgan} already provides a critic network which can be used to estimate this measure. However, for the purpose of this evaluation, the computation of this measure should also be done on the decorrelated dataset as well as on two halves of the training data. An additional critic network was set up with the corresponding loss and same inner architecture as the one used in the \gls{wgan}. During the training, the value \(-\loss{W}\) is a good approximation for the earth mover's distance which is shown as a function over the training time for the three datasets in \reffig{wasserstein-metric}.
+
+The value it converges towards should be a value close to the actual Wasserstein distance between the ground truth \signal{} dataset and one of the three datasets to compare to. This metric already shows nicely the expected bad performance of the decorrelated dataset as it converges to a relatively high distance of 3, whereas the \gls{wgan}-generated data has a distance of approximately 0.3 to the \signal{} data. As expected when the \gls{mc} data is split into two sets and compared using a critic an estimated distance of 0 is achieved meaning the critic can not successfully differentiate between one or the other. This is also a very strong check that there is no overfitting happening during training. This shows that the \gls{wgan}-generated dataset indeed looks similar to the training data and that the proposed way of computing this measure by training a simple critic network is suitable for this task.
+\Figure[opts={width=0.7\textwidth}]{fig/wasserstein-distance}{The plot displays the estimated Wasserstein distance \(-\loss{W}\) during training of the critic between \signal{} data with high-level variables as ground truth and the labeled data as the data to compare to (looks similar for low-level). An automatic stopping criterion results in different runtimes. It is important that this runtime is low to ensure an efficient training of the whole \gls{wgan} where a critic train step is performed much more often than a generator train step.}{wasserstein-metric}
+
+\Subsubsection{Fisher Transformation}
+
+As the computation of the Wasserstein distance relies on \gls{dl} it alone can not be a good metric. However, comparing and inspecting high-dimensional data is, in general, a very hard task and \gls{dl} techniques next to other \gls{ml} techniques are currently the only ones that can truly access high-dimensional correlations in a general way\footnote{Accessing high-dimensional correlations in a \textbf{non}-general way is easy and usually done by fitting a specific model parameterized by the variables spanning the high-dimensional space.}. For providing at least one mathematically rigorous measure one can reduce the problem of comparing only 2-dimensional correlations. Picking two variables one can take a look at a 2-dimensional histogram, but this would be impractical to do so for all combinations of variables. A common measure to reduce this correlation information is to compute the correlation coefficient between two variables. It is then possible to plot all the correlation coefficients for all combinations of variables into a matrix which is shown for the different datasets in \reffig{correlation-matrix}.
+\begin{figure}
+    \begin{minipage}{0.9\textwidth}
+        \centering
+        \begin{minipage}{0.3\textwidth}
+            \incgfx{width=\textwidth}{fig/correlation-32low-MC-ttH}
+        \end{minipage}
+        \begin{minipage}{0.3\textwidth}
+            \incgfx{width=\textwidth}{fig/correlation-32low-WGAN-ttH}
+        \end{minipage}
+        \begin{minipage}{0.3\textwidth}
+            \incgfx{width=\textwidth}{fig/correlation-32low-decorr-ttH}
+        \end{minipage}
+
+        \begin{minipage}{0.3\textwidth}
+            \incgfx{width=\textwidth}{fig/correlation-26high-MC-ttH}
+        \end{minipage}
+        \begin{minipage}{0.3\textwidth}
+            \incgfx{width=\textwidth}{fig/correlation-26high-WGAN-ttH}
+        \end{minipage}
+        \begin{minipage}{0.3\textwidth}
+            \incgfx{width=\textwidth}{fig/correlation-26high-decorr-ttH}
+        \end{minipage}
+    \end{minipage}
+    \begin{minipage}{0.07\textwidth}
+        \incgfx{trim={0 -60 0 0},clip,width=\textwidth}{fig/correlation-cbar-big}
+    \end{minipage}
+
+    \caption{The different correlation coefficients are represented for the \signal{} dataset. The top row consists of evaluations on the low-level variables whereas the bottom row presents the high-level observables. From left to right: \gls{mc} \signal{}, WGAN-generated and decorrelated data. }\label{fig:correlation-matrix}
+\end{figure}
+
+As expected these plots show that the decorrelated data is indeed decorrelated and again the \gls{wgan}-generated data has a close resemblance to the training data. However, the logarithmic scale also reveals that especially in the low-level dataset the \gls{wgan} produces correlations where there should not be any.
+
+To construct a meaningful and condensed value characterizing the difference in these correlation values one can use the Fisher transformation~\cite{fisher-trafo}.
+
+The Fisher transformation is simply the \(\arctanh \) of a correlation coefficient, but it has a very helpful feature. In contrast to the raw correlation coefficient \(r\) the Fisher transformation of this value \(z=\arctanh(r)\) is Gaussian distributed. Lets say we have computed \(r\) for the variables \(X\) and \(Y\) over a sample of size \(N\). Now the variance of the variable \(z\) is approximately \(\frac1{\sqrt{N-3}}\) and vanishes for large \(N\) as expected. For \(N\to\infty \) the value \(r\) approaches the true correlation \(\rho \), so the mean of \(z\) has to be \(\arctanh(\rho)\) and is in fact independent of \(N\).
+If there exist two samples \(A\) and \(B\) of size \(N_A\) and \(N_B\) following supposedly the same probability distribution the value \begin{equation}
+    \hat{z}_{AB}=\frac{z_A - z_B}{\sqrt{\frac1{N_A-3}+\frac1{N_B-3}}} \sim \mathcal{N}(\mu=0, \sigma=1)
+\end{equation} should in conclusion be normal distributed with a mean of 0 and a variance of 1.
+With two datasets for comparison each containing 26 variables (or more) one has \(\frac{25*26}2\) different \(\hat{z}_{AB, XY}\) values which should all be normally distributed. With this much statistic, it makes sense to reduce this to one number by using the \(\chi^2\) measure which is able to show if the values reasonably follow a normal distribution. This results in a single value characterizing the difference in 2-dimensional correlations between two datasets \(A\) and \(B\):
+\begin{equation}
+    \chi^2(FT(A, B)) = \frac{\sum_{X,Y} \hat{z}^2_{AB,XY}}{\sum_{X,Y}}
+\end{equation}
+If the two distributions \(A\) and \(B\) differ then the difference \(z_A - z_B\) should not be distributed around zero but significantly deviate from that. This, in turn, would blow up the \(\chi^2\) measure indicating clearly that the two distributions do not match well with respect to 2-dimensional correlations.
+
+Figure~\ref{fig:fisher-curve} shows how this constructed value improves over the course of training. As expected the comparison of \gls{mc} data to itself results in a value of the order 1. The other values are reported in \reftab{fisher} for the \signal{} dataset. These values do not differ for \background{} with respect to the overall noise with this noise also being the reason for the rough estimates in the table.
+\Figure[opts={width=0.7\textwidth}]{fig/fisher-26high-ttH}{The improvement of the fisher transform score is clearly visible. As a reference, the values for the decorrelated data and the \gls{mc} data have been added as horizontal lines. The used dataset was again the \signal{} high-level data with the others looking similar.}{fisher-curve}
+\begin{table}
+    \centering
+    \begin{tabular}{cccc}
+        \(\chi^2(FT)\) & \gls{mc} & \gls{wgan} & decorrelated \\
+        \midrule
+        26 high-level variables & \(\approx 1\) & \(\approx 50\) & \(\approx 10,000\) \\
+        32 low-level variables & \(\approx 1\) & \(\approx 40\) & \(\approx 2,000-3,000\)
+    \end{tabular}
+    \caption{The correlation scores of the different datasets with respect to the training data (\gls{mc}) for the \signal{} region.}\label{tab:fisher}
+\end{table}
+
+\Subsubsection{Classification Benchmark}
+
+The first two measures that were introduced are lightweight in terms of computation and can be tracked during training for having a fast feedback loop. However, it is hard to actually say if the generated \gls{wgan} data is good enough to be used for certain tasks. In fact, this definition of `goodness' depends heavily on the task at hand. One task might only take the 1-dimensional histograms into account where a different application mostly considers highly correlated variables. For this kind of data generation, the ultimate and deciding metric will always be a value considering the actual task at hand. For this reason, it is interesting to mimic a simplified physics analysis. Most analyses for \gls{sm} searches come down to discriminating signal from background events using nowadays mostly \glspl{dnn}. In this section, such an analysis will be presented in an idealized way using the signal and background dataset and training a simple discriminator network\footnote{This discriminator has for simplicity again the same internal structure as the critic and the generator in the \gls{wgan}.} trained to differentiate between the two processes. This training happens three times, once for each dataset (\gls{mc}, \gls{wgan}-generated, decorrelated). After the training the accuracy of the network will be reported on some validation data, this data being \gls{mc} itself which was, of course, left out during the training in the \gls{mc} dataset case.
+
+An important note is that the decorrelated and \gls{wgan}-generated data were constructed separately for the \signal{} and \background{} dataset. This means there were two \glspl{wgan} trained and used for generation, one producing \signal{}-like events and the other producing \background{}-like events.
+
+The results of these trainings are shown in \reftab{classification-results}.
+\begin{table}
+    \centering
+    \begin{tabular}{cccc}
+        accuracy & \gls{mc} & \gls{wgan} & decorrelated \\
+        \midrule
+        26 high-level variables & 64.0 \% & 61.1 \% & 62.3 \% \\
+        32 low-level variables & 86.0 \% & 69.9 \% & 58.6 \%
+    \end{tabular}
+    \caption{The reported validation accuracies of a classifier trained on the different datasets but validated always on the \gls{mc} data.}\label{tab:classification-results}
+\end{table}
+As expected, training a classifier on the data domain on which it is also evaluated results in the best accuracy. The reason why the accuracy on the low-level dataset is so much higher is that the used jets were ordered according to the event generator labels. The high-level variables are computed by algorithms that do not take such orderings into account as these do not exist in measured data, therefore the discriminating power is lower for the high-level dataset. It is interesting to see that in this case, the decorrelated dataset performs better than the \gls{wgan} data. The most likely explanation is that the high-level variables are already constructed in such a way that they are discriminating all by themselves while the correlations between the observables seem to contain very little information. The \gls{wgan} being able to adapt the distribution actually introduces slight differences to the one-dimensional histograms (as seen in the previous section) which in the case of the high-level variables seems to hurt more than the gain in potentially higher order variables correlations could be for the classification task.
+For the low-level dataset, these correlations make a difference and the one-dimensional histograms contain close to no information. However, the difference between the \gls{mc} and the \gls{wgan}-generated data is large so that for this particular task one would not consider the \gls{wgan} to be a viable solution.
+
+As we have seen, the \gls{wgan} is capable of generating data according to some training data distribution. The Wasserstein distance and the 2-dimensional correlation coefficients were evaluated to get better insights into the performance of the \gls{wgan}. Especially the latter one being a completely deterministic tool results in the confident confirmation that the \gls{wgan} is generating correlated data. The classification benchmark introduced a challenge for the \gls{wgan}. Even though the classifier was simple it showed that the data quality should always be measured with respect to the task the data is needed for. The classifier revealed that even though the \gls{wgan} is capturing correlations, it either is missing more complicated correlations or is just not very accurate, leading to a drop in the classification accuracy.
+
+At the same time, the benchmark leads to some insights about the data itself. As the \gls{wgan} data can be regarded as a noisy version of the \gls{mc} data distribution, we have seen that the classification on the high-level variables is more based on their individual discriminating features and not their correlated interplay, whereas it is the opposite with the 32 low-level variables. In both cases, it still seems to be very important that the lower dimensional correlations (one-dimensional histograms) match well to obtain a good performance.
+
+This leads to the next section discussing the refinement of the \gls{mc}-generated data itself by improving the shape-agreement of measured data and produced \gls{mc} events.

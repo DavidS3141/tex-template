@@ -1,0 +1,206 @@
+% !TEX root = ../../thesis.tex
+
+\Subsection{High Energy Physics}\label{ssec:cms}
+
+High Energy Physics focuses on the investigation of the \gls{sm} and its possible extensions. Therefore, particle colliders are built to probe particle interactions and decays by detecting the corresponding end products and reconstructing the particle interactions based on this data. The \gls{cms} detector is one such detector and part of the \gls{lhc}. Scientists from roughly 200 institutes from around the world are participating in developing the detector structure, the data analyses, and the corresponding theoretical physics models.
+
+This chapter is starting with a short overview of the theoretical background of elementary particle physics followed by a presentation of the CMS detector. It will be concluded with a simplified outline of a typical analysis pointing out the parts where the work of this thesis hooks in.
+
+\Subsubsection{The Standard Model of Particle Physics}\label{sssec:sm}
+
+Particle physics is the field of research that tries to find and explain the behavior of the most fundamental building blocks of our universe. The currently best-describing theoretical model of the observed phenomena is the \gls{sm}. The \gls{sm} is a quantum field theory, meaning that it describes matter and forces as excitations of fields which behave according to quantum mechanics. This model also includes special relativity as it is completely Lorentz-invariant, however, fails to include the gravitational force and thereby only covering the strong and the unified electroweak force.
+
+\paragraph{Matter and Forces}
+
+Today there are a relatively small number of truly elementary particles incorporated in the \gls{sm} that add up to the matter and the propagated forces in our universe. Figure~\ref{fig:particlezoo} gives a good overview of all particles.
+\begin{figure}[ht!]
+    \drawparticlezoo{}
+    \caption{Particles and forces of the \gls{sm}.~\cite{like-eg3}}\label{fig:particlezoo}
+\end{figure}
+
+The matter as we know it is build up of quarks organized in mesons (2 quarks) and baryons (3 quarks). Because of the strong force quarks do not exist as free particles they are only found in bound states. Additionally, charged leptons build up the outer layers of atoms and hold them together through the electromagnetic force while also being able to interact with the neutral leptons, called neutrinos, through the weak force. Each of these particles has a corresponding anti-particle which all together can be organized in three generations consisting each of a negatively charged lepton and the corresponding neutrino as well as an up-type quark with charge \(\frac23\) and a down-type quark with charge \(-\frac13\). The model describes the neutrinos as massless particles while recent experiments have shown that they, in fact, are not~\cite{like-eg7} resulting in one of the model's shortcomings.
+
+The forces are introduced through bosons, each one of them being responsible for one of the fundamental forces. The weak force is propagated through the \(W^\pm{}\) and the \(Z^0\) bosons and interacts with all left-handed (negative chirality) fermions of the \gls{sm}. It is the only force that provides a link between the different fermion generations. The Higgs boson being the particle that breaks the symmetry in the electroweak force also interacts with all fermions. This spontaneous symmetry breaking delivers also an explanation for the masses of the \(W^\pm{}\) and the \(Z^0\) bosons while the photon (\(\gamma{}\)) stays massless. The photon is the mediator of the electromagnetic force and, therefore, only interacts with charged fermions. The quarks, being the only fermions with color charge, are the only particles that interact with the 8 gluons that mediate the strong force and the color charges~\cite{like-bf8}.
+
+
+\paragraph{Mathematical Theory}
+
+As it is a field theory, it is mathematically best described by a Lagrangian density \(\loss{}(x)\) as a function of space-time coordinates \(x\).
+When expanding the Lagrangian density (often abbreviated as simply the Lagrangian) into a power series\footnote{Computing observables from Lagrangians is done in perturbation theory and extremely tedious. A lot of mathematical tools were developed to ease this step and better understand the theory, e.g.\ Feynman diagrams and corresponding rules, renormalization schemes etc.} one can derive an upper bound on the order of the power that can appear in this series expansion. This relation depends on the exact structure of the field and other involving fields but needs to hold to get finite answers for well-defined physical observables. This significantly reduces the possible Lagrangians for the \gls{sm}.
+
+Another important aspect is symmetries. There are observed symmetries in our universe that should hold in any theory, e.g.\ spacial translation and rotation as well as the CPT symmetry. Symmetries greatly reduce the space of possible models and are simple and elementary. Following the guideline of constructing the simplest theory that can describe all physical phenomena it is natural to build up a model by postulating a few symmetries that lead to a single possible Lagrangian that correctly describes our world.
+
+The \gls{sm} is build up from the symmetry group \begin{equation}
+     \underbrace{SU(3)}_\text{QCD} \otimes \underbrace{SU(2) \otimes U(1)}_{\text{Electroweak \& Higgs}}
+\end{equation} which establishes \gls{qcd} with the gluons as force mediators between color-charged particles and features the unified theory of Electromagnetism, the weak nuclear force and the Higgs mechanism~\cite{qft-lehrbuch}.
+
+\subparagraph{\acrlong{qcd}}
+
+The \(SU(3)\) symmetry group is 8-dimensional and therefore has 8 linear independent generators \(T_c=\frac{\lambda_c}2\) for \(c=1\ldots 8\) of the corresponding Lie algebra defining the basis for the infinitesimal transformations under which gauge invariance is required. Here the Gell-Mann matrices can be used to describe the generators in a systematic way. Therefore, the theory of the so-called quark field \(\psi(x)\) as the fundamental representation of the \(SU(3)\) gauge group has to be symmetric under
+\begin{align}
+    \psi(x) &\rightarrow \left[1 + \iu \alpha_a(x)T_a\right]\psi(x)\\
+    \del_\mu \psi &\rightarrow \left[1+\iu \alpha_a(x)T_a\right] \del_\mu \psi + \iu T_a \psi \del_\mu \alpha_a(x) .
+\end{align}
+Starting from the kinematic term \(\bar \psi (\iu \gamma^\mu \del_\mu - m_\psi) \psi{}\) one has to introduce 8 gauge fields \(\mathcal{A}_\mu^c\) and the corresponding gauge covariant derivative \(D_\mu = \del_\mu + \iu g_s T_a \mathcal{A}_\mu^a\) to complete the kinetic \gls{qcd} Lagrangian to be gauge invariant.
+\begin{align}
+    \loss{QCD} &= \bar \psi ( \iu \gamma^\mu D_\mu - m_\psi) \psi - \frac14 G^a_{\mu\nu} G_a^{\mu\nu}\\
+    &=\underbrace{\bar \psi ( \iu \gamma^\mu \del_\mu - m_\psi ) \psi}_\text{quark kinematics} - \underbrace{g_s ( \bar \psi \gamma^\mu T_a \psi) \mathcal{A}_\mu^a}_{\text{interaction }\psi\psi \mathcal{A}} - \underbrace{\frac14 G_{\mu\nu}^a G_a^{\mu\nu}}_\text{gluon kinematics}
+\end{align}
+One can specifically check the gauge invariance by using the transformation law \(\mathcal{A}_\mu^a \rightarrow \mathcal{A}_\mu^a - \frac1{g_s} \del_\mu \alpha_a - f_{abc} \alpha_b \mathcal{A}_\mu^c\) and the definition of the gluon field strength tensor \(G_{\mu\nu}^a = \del_\mu \mathcal{A}_\nu^a - \del_\nu \mathcal{A}_\mu^a + g_s f_{abc} \mathcal{A}_\mu^b \mathcal{A}_\nu^c\). Here \(f_{abc}\) are the structure constants of the algebra and \(g_s\) is the quark-gluon coupling strength.
+
+\subparagraph{Electroweak Unification and Spontaneous Symmetry Breaking}
+
+The \(SU(2)\) symmetry group is 3-dimensional and \(U(1)\) is 1-dimensional, on has therefore 4 generators them being \(T_i = I_i = \frac{\sigma_i}2\) for \(i=1\ldots 3\) and \(T_4 = Y\) with \(I\) and \(Y\) being the operators for the weak isospin and the hypercharge, respectively.
+Corresponding to physical observations there exist fermions with positive chirality (right-handed) having always an isospin of 0 and not coupling to the weak force as well as fermions with negative chirality (left-handed) always having isospin \(\frac12\) and coupling to the weak force. According to these observations (and the non-existence of right-handed neutrinos)\footnote{All the statements are of course regarding matter, for antimatter it is the opposite.} one classifies the fermions into the corresponding doublets for \(I=\frac12\) and singlets for \(I=0\):
+\begin{align}
+    \binom{u}d_L&, u_R, d_R &\text{and analogously for } c, s, t, b\\
+    \binom{\nu_e}e_L&, e_R&\text{and analogously for } \nu_\mu, \mu, \nu_\tau, \tau
+\end{align}
+
+Similarly as with the \gls{qcd} Lagrangian one has to introduce gauge bosons to fix the required local symmetry transformations
+\begin{equation}
+    \psi (x) \rightarrow [1 + \iu \beta(x) Y + \iu \alpha_i (x) I_i] \psi (x) \quad \text{with } I_i \psi_R = 0 .
+\end{equation}
+With the covariant derivative \(D_\mu = \del_\mu + \iu g I_j W^j_\mu + \iu g' Y B_\mu{}\) we can complement the kinetic electroweak Lagrangian to be gauge invariant.
+\begin{equation}
+    \loss{EW, kin} =\sum_f \bar \psi_f \iu \gamma^\mu D_\mu \psi_f - \frac14 B_{\mu\nu} B^{\mu\nu} - \frac14 W_{\mu\nu}^i W_i^{\mu\nu}
+\end{equation}
+Once again one has the corresponding field strengths \(B_{\mu\nu} = \del_\mu B_\nu - \del_\nu B_\mu{}\) and \(W_{\mu\nu}^i\) analogous to \(G_{\mu\nu}^a\) using \(f_{abc}=\epsilon_{abc}\) as the structure constants for \(SU(2)\) and \(g\) instead of \(g_s\) as coupling.
+
+This Lagrangian does not feature a mass term for the fermions nor a mass term for the gauge bosons as both would break the local gauge symmetry. The Higgs mechanism introduces a spontaneous symmetry breaking that makes it possible to write down a gauge invariant Lagrangian while also heaving mass terms for the fermions and bosons.
+
+Introducing a complex scalar field \(\Phi{}\) with a potential
+\begin{equation}
+    V(\Phi) = -\mu^2 \Phi^\dagger \Phi + \frac\lambda4{(\Phi^\dagger \Phi)}^2
+\end{equation}
+which has its global minima at \(\Phi = \mu \sqrt{\frac2\lambda} e^{\iu \theta}\) instead of 0 causes the ground state not to be symmetric under the \(U(1)\)-symmetry of a scalar field. This leads to the Higgs Lagrangian
+\begin{equation}
+    \loss{H} = {(D_\mu \Phi)}^\dagger (D^\mu \Phi) - V(\Phi)
+\end{equation}
+
+Parametrizing the field \(\Phi{}\) with respect to the ground state and removing a degree of freedom through gauge fixing of the parameter \(\theta{}\) of the ground state one can write
+\begin{equation}
+    \Phi(x) = \frac1{\sqrt2} \binom{0}{v + H(x)}
+\end{equation}
+with \(H\) being the Higgs field and \(v=\frac\mu{\sqrt\lambda}\) being the expectation value of the ground state. Through the constant offset \(v\) and the gauge fields in the \(D_\mu{}\), this Lagrangian actually creates mass terms for the bosons. Additionally, introducing the electroweak mixing angle \(\theta_W = \arctan(g' / g)\) between the two neutral boson fields \(W^3\) and \(B\) one can create the two physical bosons
+\begin{equation}
+    \binom{\gamma}{Z^0} = \begin{pmatrix} \cos \theta_W & \sin \theta_W\\-\sin \theta_W & \cos \theta_W\end{pmatrix} \cdot \binom{B}{W^3}
+\end{equation} while \(W^1, W^2\) are mixed in such a way to create the two bosons with exact charge
+\begin{equation}
+    W^\pm = \frac1{\sqrt2} (W^1 \pm W^2).
+\end{equation}
+
+This mechanism creates all the boson masses and couplings with just the free model parameters of \(\theta_W, g, g', \mu{}\) and \(\lambda{}\) which fit extremely well with measured data~\cite{like-bf2}.
+
+With the Higgs field, one can now also introduce mass terms for the fermions leading to the Yukawa Lagrangian:
+\begin{equation}
+    \loss{Y} = - \sum_f m_f \bar \psi_f \psi_f - \sum_f \frac{m_f}v \bar \psi_f \psi_f H
+\end{equation}
+The full electroweak Lagrangian reads then
+\begin{equation}
+    \loss{EW} = \loss{EW, kin} + \loss{H} + \loss{Y}.
+\end{equation}
+
+
+\Subsubsection{The Compact Muon Solenoid}\label{sssec:detector}
+
+To explore the subatomic world of particle physics physicists have built larger and larger particle accelerators and detectors. These setups are usually collision experiments creating head-on collisions of particles with high energies which in turn create particles of potentially high masses. These particles decay again into (semi-stable) particles which can be (in-)directly measured. The amount, the energy and their respective direction can then be used in physics analyses to create a deeper understanding. % chktex 36
+
+The \gls{cms} experiment is a particular particle detector located at \gls{cern} measuring the particle collisions of the \gls{lhc} accelerator, which will be briefly introduced before going into more detail of the \gls{cms} experiment itself.
+
+\paragraph{Large Hadron Collider}
+
+The \gls{lhc} is the world's largest physics apparatus mainly consisting of a 27 km long beam pipe inside a circular tunnel around 100m deep under the ground of the French-Swiss border (see \reffig{lhc}). The start of construction was in 1998 using the tunnel of the \gls{lep} by replacing it completely. It took 10 years to built and started taking data end of 2009.
+\Figure[opts={trim={0 10 0 0},clip,width=\textwidth}]{fig/lhc}{Overview of the beam pipe and accelerator infrastructure at the \gls{cern}.~\cite{like-bf23}}{lhc}
+
+Most of the year the \gls{lhc} is running proton-proton collision experiments with a center-of-mass energy of around 13 TeV and an
+instantaneous luminosity of the order of \(\SI{e34}{cm^{-2}.s^{-1}}\).\todo{-cite \url{https://cms-service-lumi.web.cern.ch/cms-service-lumi/publicplots/peak_lumi_per_day_pp_2016.pdf}} Additionally, one of the last months every year the \gls{lhc} is running heavy ion experiments by colliding lead nuclei with protons at a center-of-mass energy of around \SI{5}{\tera eV} and with an instantaneous luminosity of \(\SI{e27}{cm^{-2}.s^{-1}}\).
+
+To actually fill the \gls{lhc} with highly energetic protons it is necessary to pre-accelerate them as the large ring makes it extremely inefficient to accelerate protons starting from zero. Here come the smaller accelerators at the \gls{cern} into play. The protons start off at a linear accelerator, the \gls{linac2}, bringing the protons up to \(\SI{50}{\mega eV}\). The \gls{psb}, \gls{ps} and \gls{sps} bring them up to \(\SI{1.4}{\giga eV}\), \(\SI{25}{\giga eV}\), and \(\SI{450}{\giga eV}\) respectively, until they enter the \gls{lhc} and are there brought up to the final energy of \(\SI{6.5}{\tera eV}\) per proton.
+
+The acceleration is done via 8 superconducting radiofrequency cavities (\(\SI{400}{\mega Hz}\)) providing \(\SI{485}{\kilo eV}\) per turn to each proton. They also synchronize the protons organizing them in smaller bunches to get a higher instantaneous luminosity per bunch crossing.
+
+To keep the protons on their path in the pipe and control the points of beam crossing strong magnets are needed all around the \gls{lhc}. Keeping the beam small and narrow requires focusing it from time to time. This is done by 392 quadrupoles which provide a magnetic field that acts as a lens on the protons. 1232 dipole magnets with a strength of up to \(\SI{8.3}{T}\) are used to bend the beam keeping it on the circular route through the pipe. To reach these magnetic fields efficiently with electromagnets one exploits the features of the superconductive material NbTi at a temperature of \(\SI{1.9}{K}\).
+
+The \gls{cms} is one of the two general purpose detectors with the other being \gls{atlas} sitting at the opposite side of the \gls{lhc}. Both were built to discover and measure the Higgs boson while also investigating physics at high luminosities. The two other large detectors located next to \gls{atlas} are the \gls{lhcb} and \gls{alice} with the former being specialized on measurements around the bottom quark and the latter being optimized to observe the heavy-ion collisions in great detail.~\cite{lhc}
+
+\paragraph{The CMS Detector}
+
+The \gls{cms} detector~\cite{cms} itself consists of multiple layers each one of them fulfilling a different purpose. They are shown in \reffig{cms} and will be discussed in the same order as the particles would pass them, from the inside out.
+\Figure[fileExt=png]{fig/cms}{Schematic diagram of the different detector layers in CMS.~\cite{cms-source,cms-modify}}{cms}
+
+\subparagraph{Tracker}
+
+The tracker is the inner-most layer of \gls{cms} and consists of a large number of silicon detectors organized in pixels and readout strips. It is their responsibility to measure the exact particle track without having a big impact on its flight path. A particle passing a few of the silicon chips will create a measurable signal in each of the passed pixels which leads to an identifiable path. Measuring and discriminating the track from others with a high resolution but only a few interaction points (in order to keep the particle unaffected) requires a high granularity of the pixels (\(\SI{10}{\micro m}\)).
+
+The particle tracks are important to reconstruct the initial particle momentum. Together with a precise energy measurement from the calorimeters, one can reconstruct the entire four-momentum.~\cite{like-bf30}
+
+\subparagraph{Electromagnetic Calorimeter}
+
+The \gls{ecal} is optimized to measure the energy of photons and electrons by using the dense \gls{pbwo} to create electromagnetic showers in this crystal scintillator material. These showers produce photons that either produce secondary showers or are in the regime of visible light to which \gls{pbwo} is transparent therefore allowing it to travel to the \glspl{pmt} where the energy amount of these secondary photons are measured to give an estimate on the particle energy. The energy resolution, therefore, depends on the shower structure and size resulting in an overall energy dependence~\cite{like-eg21}:
+\begin{equation}
+    \frac{\sigma_E}E = \sqrt{{\left(\frac{2.8\%}{\sqrt{E[GeV]}}\right)}^2 + {\left(\frac{12\%}{{E[GeV]}}\right)}^2 + {\left(0.3\%\right)}^2}
+\end{equation}
+
+\subparagraph{Hadronic Calorimeter}
+
+The \gls{hcal} is measuring the energy of particles interacting via the strong nuclear force, e.g.\ the created hadrons. Similar to the \gls{ecal} it uses fluorescent scintillator material and photodetectors to measure the energy deposit via secondary photons. However, actually inducing the showers requires a different material. Layers of brass and steel have proven to work best for the \gls{cms} experiment in order to keep the uncertainty on the energy as small as possible~\cite{like-eg22}:
+\begin{equation}
+    \frac{\sigma_E}E = \sqrt{
+        {
+            \left(
+                \frac{100\%}{\sqrt{E[GeV]}}
+            \right)
+        }^2
+    + {(0.3\%)}^2}
+\end{equation}
+
+\subparagraph{Superconducting Solenoid}
+
+The solenoid is a strong superconducting \gls{nbti} magnet that creates a magnetic field of close to \(\SI{4}{T}\) inside its barrel. This strong magnetic field is needed to ensure that also highly energetic charged particles follow a path with a measurable curvature inside the tracker as this enables a precise momentum reconstruction. The existence and direction of the curvature also identify the charge of the particle. The steel return yoke outside of the solenoid shapes the magnetic to be homogenous not only inside but also outside of the solenoid where the muon chambers are still measuring the muon flux.~\cite{like-bf29}
+
+\subparagraph{Muon Chambers}
+
+Muons are the only particles passing through the previous layers and also the return yoke, therefore the detectors just need to be optimized for their detection.
+There are three types of muon chambers installed in the outer region of the \gls{cms} detector, these being drift tubes, cathode strip chambers, and resistive plate chambers. They optimize different aspects of detection like trigger response times or precise position measurements. However, all are based on muons flying through some gas and ionizing it. An applied voltage results in the ionized particles to be collected by the cathode and anode resulting in an electrical signal. The timing of the signals can be used to deduce the position more accurate.~\cite{cms}
+
+\subparagraph{Triggers}
+
+The detector produces a large amount of data. With a collision rate of \(\SI{40}{\mega \hertz}\) and a storage volume of approximately \(\SI{1}{\mega \byte}\) per event, this would generate an unmanageable information flow. There are two filter steps that reduce the event rate sequentially. The first trigger is implemented directly in hardware as it has to be extremely fast. It reduces the number of selected events by checking simple threshold cuts and some basic aggregation of signals. After the reduction of the event rate to about \(\SI{100}{\kilo \hertz}\), it is feasible to run some more involved algorithms combining and reconstructing more accurately the events. This is done on a software level with the second trigger reducing the event rate to an order of 100 to 200 events per second. The \gls{cms} experiment, therefore, produces around \(\SI{200}{\mega \byte}\) per second.~\cite{like-bf34}
+
+\Subsubsection{Particle Reconstruction}
+
+The raw data of the \gls{cms} experiment basically consists of position data and in addition the corresponding energy deposition in the case of the calorimeters. These are in this raw state very hard to interpret and consequently impractical for physics analyses. Thus, a couple of algorithms for reconstructing certain aspects of physical objects exist and are briefly presented.
+
+\paragraph{Particle flow algorithm}
+
+The goal of this algorithm is to most of the hits in the detector with particle flight paths. This is done by using the tracker and some combinatorics to find good tracking seeds (start points for a track reconstruction) and are then extrapolated to the calorimeters where corresponding clusters of energy deposits are detected. This reconstruction is done iteratively with loosening constraints on the fits with each iteration.
+
+Muons are reconstructed using the muon chamber and finding corresponding tracker hits on a best-fit basis, as the muon tracks are actually cleaner and easier to reconstruct than the tracker hits.~\cite{like-bf36}
+
+\paragraph{Vertex reconstruction}
+
+With the particle tracks identified and the knowledge of the four-momentum, one already has a good description of the type of particle and its origin. A vertex is a position in space where two or more particles originated from as a result of a decay or interaction. The reconstruction of these vertices by basically clustering intersections of reconstructed particle paths is very important for determining which particles stem from a single interaction point and are therefore related and which were produced by a different proton-proton collision in the same bunch. Additionally, secondary vertices can be reconstructed, which are produced by particles with a half-life that allows them to fly a measurable distance away from the primary vertex but decaying before passing through the whole detector. There are just a few particles (\(B\) mesons) that have this property leading to a good observable for particle identification.~\cite{like-bf36}
+
+\paragraph{Muon reconstruction}
+
+As the muons leave a trace in the tracker as well as the muon chambers they can be reconstructed using both information. They are divided into four categories:
+\subparagraph{Global muons} leave a complete signature in the tracker and the chambers, which can decrease the uncertainty on momentum measurements.
+\subparagraph{Tracker muons} are located by a full trace in the tracker and at least one hit from one of the inner muon chambers. These muons often have a low momentum and, therefore, not being able to reach the outer chambers.
+\subparagraph{Standalone and cosmic muons} only hit the muon chambers and are most of the times of cosmic origin. These muons are usually easy to single out as their path does not coincide with the beam.~\cite{like-bf41,like-bf42}
+
+\paragraph{Jet clustering}
+
+Quarks generally decay quite fast in a process called hadronization and fragmentation and produce many stable secondary particles. As all of this particles are boosted in the general direction of the original quark they leave a detector response of multiple particles directed in the same direction. This is called a jet and there are different algorithms that try to cluster such particles into meaningful groups. A good jet cluster algorithm is the Anti-\(K_t\) algorithm, as it is in particular infrared safe (e.g.\ particles with low momentum do not influence the overall jet shape) and collinear safe (e.g.\ a particle with similar momentum and origin as a jet should be included).~\cite{like-bf46}
+
+\paragraph{B-tagging}
+
+As pointed out at the vertex reconstruction, the \(B\) mesons originating from hadronized \(b\)-quarks have a half-life that is just of the size to produce a secondary vertex with a measurable distance to the primary vertex. This distance allows for a successful \(B\)-tagging algorithm, called the \gls{csv} algorithm. This and other algorithms produce for most jets a number between 0 and 1 indicating the likelihood of that jet being a \(b\) jet. A more involved \(b\) tagger with a higher performance is called the DeepCSV algorithm, as it combines the best aspects of Deep Neural Networks and the \gls{csv}. As most modern studies and analyses focus around heavy particles decaying into \(b\)-quarks, \(B\)-tagging is a very important aspect in the reconstruction of data.~\cite{like-bf48}
+
+\Subsubsection{Monte Carlo Data Generation}\label{sssec:mc}
+
+\gls{mc} events are simulated events based on a certain physics model (usually the \gls{sm}) that give physicists an indication of how detector responses are supposed to look like. It is important to have an accurate description of the predictions by the model as it enables us to compare it to the taken measurements and validate our models or find new physics.
+
+As it is impossible to write algebraic expressions for the whole detector response, a probabilistic (\gls{mc}) simulation method is chosen. According to their theoretical cross sections, different hard scatterings are sampled. Additional interactions and decays are stochastically performed to generate an event with resonance decays, initial and final state radiation as well as hadronization and fragmentation. This event generation is done by programs like \pythia{} or \textit{PowHEG}.
+
+The generated events are then put through a detector simulation that has knowledge of the exact detector layout and material composition. This step propagates the particles through different materials (also stochastically performed) and simulates corresponding detector responses as well as particle shower developments including noise effects. A powerful yet computing-intensive software program is \geant{}, whereas \delphes{} offers a reduced complexity and accuracy.~\cite{cms-eventgen,cms-fastsim}

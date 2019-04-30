@@ -1,0 +1,48 @@
+% !TEX root = ../thesis.tex
+
+\selectlanguage{ngerman}%
+\pagenumbering{Roman}%
+\input{content/aux/front.tex}%
+% %
+\newpage%
+\pdfbookmark[1]{Contents}{Contents}%
+\selectlanguage{english}%
+\addtocontents{toc}{~\hfill\textbf{Page}\par}%
+\tableofcontents%
+%
+\newpage%
+\pagenumbering{arabic}%
+\fancyfoot[RO,LE]{\slshape{\thepage}}%
+\renewcommand{\headrulewidth}{0.5pt}%
+\fancyhead[LE]{\slshape{\leftmark}}%
+\fancyhead[RO]{\slshape{\rightmark}}%
+%
+\input{content/main/introduction.tex}
+\input{content/main/experiments.tex}
+\input{content/main/deeplearning.tex}
+\input{content/main/mc_wgan.tex}
+\input{content/main/deepsf.tex}
+\input{content/main/magnet.tex}
+\input{content/main/conclusion_v2.tex}
+\todo{-fix all cite with space before}
+\todo{run spellchecker}
+\todo{compare structure to MWirtz}
+%
+\newpage%illumination
+\pagenumbering{Alph}%
+\input{content/aux/appendix.tex}%
+%
+\newpage%
+\thispagestyle{empty}%
+\input{content/aux/thx.tex}%
+%
+% \newpage%
+% \thispagestyle{empty}%
+% \hfill%
+%
+% \cleardoublepage{}
+% \newpage%
+% \selectlanguage{ngerman}%
+% \thispagestyle{empty}%
+% \input{content/aux/acknowlm.tex}%
+%

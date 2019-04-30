@@ -1,0 +1,144 @@
+% shortcut => use \abbrev{CMS}{Compact Muon Solenoid}
+\let\abbrev\nomenclature%
+%
+% manual indentation shortcuts => \ind(xs, s, l, xl)
+\newcommand{\indxs}[0]{\hspace*{0.38em}}%
+\newcommand{\inds}[0]{\hspace*{0.75em}}%
+\newcommand{\ind}[0]{\hspace*{1.5em}}%
+\newcommand{\indl}[0]{\hspace*{2em}}%
+\newcommand{\indxl}[0]{\hspace*{3em}}%
+%
+% vertical offset shortucts => \pg(s, l)
+\newcommand{\pgs}[0]{\vspace*{0.125em}}
+\newcommand{\pg}[0]{\vspace*{0.25em}}
+\newcommand{\pgl}[0]{\vspace*{0.33em}}
+%
+% associate figures with sections
+\renewcommand{\thefigure}{\thesection.\arabic{figure}}%
+%
+% associate tables with sections
+\renewcommand{\thetable}{\thesection.\arabic{table}}%
+%
+% associate equations with sections
+\renewcommand{\theequation}{\thesection.\arabic{equation}}%
+%
+% associate listings with sections
+\renewcommand{\thelisting}{\thesection.\arabic{listing}}
+
+% reset both counters after each section
+\newcommand{\secsep}{\hspace{1em}}%
+\newcommand{\Section}[2][]{%
+    \FloatBarrier%
+    \pageshift
+    \thispagestyle{plain}%
+    \setcounter{subsection}{0}%
+    \setcounter{figure}{0}%
+    \setcounter{table}{0}%
+    \setcounter{equation}{0}%
+    \setcounter{listing}{0}
+    \refstepcounter{section}%
+    \ifthenelse{\equal{#1}{}}{\section*{\thesection\secsep#2}}{\section*{\thesection\secsep#1}}%
+    \sectionmark{#2}%
+    \addcontentsline{toc}{section}{\thesection\secsep#2}%
+}%
+\newcommand{\Subsection}[2][]{%
+    \FloatBarrier%
+    \setcounter{subsubsection}{0}%
+    \refstepcounter{subsection}%
+    \ifthenelse{\equal{#1}{}}{\subsection*{\thesubsection\secsep#2}}{\subsection*{\thesubsection\secsep#1}}%
+    \subsectionmark{#2}%
+    \addcontentsline{toc}{subsection}{\thesubsection\secsep#2}%
+}%
+\newcommand{\Subsubsection}[2][]{%
+    % \FloatBarrier%
+    \refstepcounter{subsubsection}%
+    \ifthenelse{\equal{#1}{}}{\subsubsection*{\thesubsubsection\secsep#2}}{\subsubsection*{\thesubsubsection\secsep#1}}%
+    \subsubsectionmark{#2}%
+    \addcontentsline{toc}{subsubsection}{\thesubsubsection\secsep#2}%
+}%
+%
+% shortcut for a simple table
+\newcommand{\Table}[6]{%
+\begin{table}[#1]%
+\begin{center}%
+\begin{tabular}{#5}%
+#6%
+\end{tabular}%
+\caption[#3]{#3#4}%
+\label{#2}%
+\end{center}%
+\end{table}%
+}%
+%
+% shortcut for a simple figure
+\newcommand{\Figure}[7]{
+\begin{figure}[#1]%
+\begin{center}%
+\includegraphics[width=#2]{#6}
+\caption[#4]{#4#5}%
+\label{fig:#3}%
+\end{center}%
+\end{figure}%
+}%
+
+\newcommand{\Faynman}[5]{
+\vspace{2mm}
+\begin{fmffile}{#1}
+\begin{fmfgraph*}(#2)
+\fmfstraight
+\fmfleftn{l}{#3}
+\fmfrightn{r}{#4}
+#5
+\end{fmfgraph*}
+\end{fmffile}
+\vspace{2mm}
+}
+
+% shortcut for a minted code listing
+\newcommand{\Mintedfile}[6]{
+\begin{listing}[#1]
+\begin{center}
+\inputminted{#5}{#6}
+\caption[#2]{#2#3}
+\label{#4}
+\end{center}
+\end{listing}
+}
+
+% optinally adds an empty page between chapters to ensure that new chapters allways start
+% on odd pages
+\newcommand{\pageshift}{
+\FloatBarrier%
+\cleardoublepage
+% \newpage
+% \ifodd\thepage%
+% %nothing to do
+% \else
+% \newpage
+% \thispagestyle{empty}
+% \null%
+% \fi
+}%
+%
+% fast equations using align
+\newcommand{\Appendix}[1]{
+\newpage%
+\thispagestyle{plain}%
+\phantomsection%
+#1
+}
+
+% some math commands
+\newcommand{\lag}{\mathcal{L}}
+\newcommand{\del}{\partial}
+\newcommand{\cdel}{\cancel{\partial}}
+\newcommand{\dagg}[2][\mu]{i \gamma^#1 #2_#1}
+\newcommand{\vect}[2][pmatrix]{\begin{#1}\mqty{#2}\end{#1}}
+\newcommand{\HH}{di-Higgs}
+\newcommand{\bref}[1]{(see \cref{#1})}
+
+\newcommand{\s}[1]{\acrlong*{#1}}
+\newcommand{\p}[1]{\acrlongpl*{#1}}
+\newcommand{\eg}{e.g.\ }
+\newcommand{\SF}[1]{SF_\text{#1}}
+\newcommand{\pp}[4]{{/home/bfis/mnt/lx3a24/public/analyses/DiHiggs/#1/RunIISummer16MiniAODv2_80X/#2/#3/pdf/#4}.pdf}

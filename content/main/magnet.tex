@@ -1,0 +1,290 @@
+% !TEX root = ../../thesis.tex
+
+\Section{Fit of the observed Cosmic Ray Skymap}\label{sec:magnet}
+
+\emph{This section reflects on the development of a novel fit method published under the title `Origins of Extragalactic Cosmic Ray Nuclei by Contracting Alignment Patterns induced in the Galactic Magnetic Field'~\cite{Erdmann2018a} submitted to the journal Astroparticle Physics. In this thesis, the focus will be on the \gls{dl} techniques and the high-dimensional fitting aspects.}
+
+This section will introduce a novel method that could potentially give new insights into the origin of \glspl{uhecr} which is a very relevant still mostly unanswered research question.
+
+As \refssec{app} has motivated there do not exist a lot of cosmic objects that have the potential to produce \glspl{uhecr}. However, the measured arrival directions are remarkably isotropic distributed. One important reason for this may be the deflection of the particles through the galactic magnetic field of our galaxy. Thus, the working hypothesis of this section is that the \glspl{uhecr} arrive at the edge of our galaxy in a less isotropic pattern, meaning that a few of them are expected to originate from the same extragalactic source and therefore arriving from the same direction before entering the galactic magnetic field of the Milky Way. The corresponding null hypothesis is consequently an isotropic arrival of \glspl{uhecr}.
+
+Current research tries to investigate the possible scenarios by developing algorithms that essentially backtrack measured \glspl{cr} through the galactic magnetic field and find clusters in the extragalactic arrival directions. These algorithms can then be evaluated on simulations of the different scenarios regarding their discriminating power between isotropic and anisotropic extragalactic arrival directions.
+
+A particular problem with these approaches is, that there is very little information on the charge of the \glspl{cr} which plays an important role when tracking particles through a galactic magnetic field. Thus, most models make simplifying assumptions that lead to a non-optimal performance.
+
+An idealized algorithm would perform some global fit of the hidden physics variables (extragalactic source direction \(\hat s\) and charge \(\hat Z\)) for each \gls{uhecr}. This fit would take all measurements (energy \(E\), arrival direction \(p\), \(X_{\max}\)) with their respective uncertainties into account and produce a result that aims at clustering the \(\hat s_i\) as much as the data reasonably allows (\(i=1\ldots N\) being the different \glspl{cr}). This results effectively in a high-dimensional fit where the generated data is the prediction
+\[\hat p_i= T \begin{pmatrix}
+    \hat s_i\\ \hat Z_i \\ E_i
+\end{pmatrix}\]
+which needs to fit the measured \(p_i\) resulting in an overall dimensionality\footnote{The 3-dimensional unit vector \(p_i\) is spanning a 2-dimensional space.} of \(2N\). With \(N\) being in the order of 1000 this seems to be too large even for \glspl{dnn}. However, an important difference compared to the previous sections is the fact that the data can actually be fitted exactly avoiding the detour using a \gls{dnn} to encode the data distribution itself.
+
+The following section will generalize the problem and point out the difficulties and problems that reason the use of the applied \gls{dl} techniques. Afterward, the exact architecture of the fit will be discussed with a great focus on the loss construction. The different simulated scenarios will be presented in a separate chapter before showing the results.
+
+\Subsection{Generalization}
+
+The task of reconstructing the hidden physics variables based on a model can be formally described as computing an inverse of a function. The physical model is a function with the hidden physics variables \(\bm p\) being the input of this function \(T\) and the observed data the output \(\hat {\bm x} = T(\bm p)\). The task is to find the parameters \(\bm p\) that produce predicted observations \(\hat{ \bm x} \approx \bm x\) which fit best with the measured data \(\bm x\). A very common practice is to find the solution \(\bm p\) via gradient descent over some loss, e.g.~\(\loss{}(\bm p)={(\bm x - T(\bm p))}^2\). For a low number of parameters, this is most of the time straight-forward, as gradients can be computed in an approximate fashion
+\begin{equation}
+    \frac{\del \loss{}}{p_i} = \frac{\loss{}(\bm p + \epsilon \bm e_i) - \loss{}(\bm p - \epsilon \bm e_i)}{2 \epsilon}
+\end{equation}
+assuming a low computation time of \(T\).
+
+However, in the case of a large number of parameters and a non-trivial model \(T\), this approach becomes highly inefficient as not only the computational cost for computing the gradients increase but also the required gradient descent steps that need to be taken increases with the size of the search space. Traditional approaches can overcome this hurdles by using knowledge and heuristics about \(T\) to artificially create some update step that brings one iteratively closer to the solution. One can expect that these updates are not always optimal and the development of such methods is elaborate and consumes a large amount of time.
+
+This section presents a task for which it is feasible to encode the model function \(T\) inside a \gls{dnn} approximating the model while providing an efficient way to actually compute the gradients of \(\hat {\bm x}\) with respect to the parameters \(\bm p\). This enables us to actually perform a traditional gradient descent.
+
+\Subsection{Fit Architecture}\label{ssec:fit-architecture}
+
+The basic principles of the architecture will be introduced step-wise by investigating first a 1-dimensional model with a simple transformation \(T\). Afterward, results for the sphere will be shown for the case of a simple relation for \(T\) and from there going to the full model using the JF12 parameterization (cf. \refsssec{jf12}) for the galactic magnetic field transformation \(T\).
+
+In all three cases the dataset of \glspl{uhecr} consists of \(N\) particles each having a recorded arrival direction \(p_i\), energy \(E_i\) and maximum shower depth \(X_{\max, i}\). For each \gls{cr} the fit has the parameters \(\hat s_i\) for the source direction (direction outside of the Milky Way) and \(\hat Z_i\) for the charge number. The hat variables will represent predicted quantities based on fit parameters and will always be real numbers as the method of gradient descent needs to work on a continuous parameter space. One such quantity is the rigidity \(\hat R_i = \frac{E_i}{\hat Z_i e}\). The used transformation law encoding the physical model takes as input the rigidity and the source direction and returns the arrival direction on Earth \(\hat p_i = T(\hat s_i, \hat R_i)\).
+
+The three transformation laws in the increasing order of complexity are:
+\begin{enumerate}
+    \item \begin{equation}\label{eq:sc1}
+        T(\hat s, \hat R) = \hat s + \frac1{\hat R}
+    \end{equation}
+
+    This is the one-dimensional toy case in which physical dimensions are omitted (\(e=1 \Rightarrow \hat R = \frac{E}{\hat Z}\)). \(\hat s\) and \(\hat Z\) are on a scale of 0 to 1 while \(E\) is a value between 1 and 10 leading to \(\frac1{\hat R} \in [0, 1]\).
+
+    \item \begin{equation}\label{eq:sc2}
+        T(\hat s, \hat R) = R_z \left(- 2 \frac{\si{\exa\volt}}{\hat R}\right) \hat s
+    \end{equation}
+
+    \(R_z(\theta)\) describes a rotation in 3 dimensions around the z-axis which is perpendicular to the galactic plane. Here we use already physical dimensions. A rigidity of \SI{100}{\exa\volt} (proton with \(E=\SI{e20}{eV}\)) would lead to a deflection angle of \(\SI{-0.02}{\radian} \approx \SI{1}{\degree}\) which roughly compares to the scale of deflections for the galactic magnetic field.
+
+    \item \begin{equation}\label{eq:sc3}
+        T(\hat s, \hat Z, E) = JF12_\text{DNN}(\hat s, \hat Z, E)
+    \end{equation}
+
+    In the following, we will refer to this as the full model. The JF12 parameterization of the galactic magnetic field is encoded in so-called lenses, a digital data structure that introduces a discrete mapping. It does not plainly depend on the source direction and rigidity but also on the exact energy and charge value. Because the lenses are discrete, they were used to create a large artificial dataset used for training a \gls{dnn}. The trained network represents the JF12 model while being differentiable.
+\end{enumerate}
+
+All of these transformations are continuously differentiable and the symbolic gradients can be easily computed using some appropriate software framework.
+
+As pointed out in the introduction and the generalization of this task, the most important aspect of this approach is the engineering of the loss which is to be optimized by the fit. The loss should guide the fit in such a way, that the observed data is reconstructed through the choice of parameters while also clustering the source directions as much as possible. To that end, the loss contains two main components guiding the fit.
+
+\paragraph{Distance Loss}
+
+The distance loss penalizes large deviations of the predicted arrival directions \(\hat p\) with respect to the measured data \(p\). The loss term is therefore simply the distance norm (in both the 1- and 2-dimensional case):
+\begin{equation}
+    D = \frac1N \sum_i {||p_i - \hat p_i ||}^2
+\end{equation}
+
+\paragraph{Cluster Loss}
+
+The aim of this loss is to cluster source directions of \glspl{cr} that are potentially close enough to originate from the same source. For the first investigations in one dimension, a simple \(k\)-Nearest-Neighbor (\(k\)NN) clustering was performed. For each source direction, one can compute the average direction of the \(k\) nearest neighbors
+\begin{equation}
+    \langle \hat s_i \rangle = \frac1k \sum_{\hat s_j \in kNN(\hat s_i)} \hat s_j
+\end{equation}
+and require that the distance to this `local average' should be small (similar to the distance loss):
+\begin{equation}
+    C_{1-dim} = \frac1N \sum_i {|| \hat s_i - \langle \hat s_i \rangle ||}^2 % chktex 35
+\end{equation}
+
+The disadvantage of this loss is the dependency on the overall number of \gls{uhecr} \(N\) when fixing \(k\) which is unphysical. Therefore, a modified version was used for the spherical cases. Instead of selecting in a discrete manner a few potential clustering candidates, a weighted loss term for all inter-source distances was used:
+\begin{equation}
+    C_{sphere} = \frac1N \sum_{i, j} \epsilon_{ij} {||\hat s_i - \hat s_j||}^2
+\end{equation}
+The weights \(\epsilon_{ij} = \epsilon ( \hat s_i, \hat s_j) = \cos^{2\gamma} \angle(\hat s_i, \hat s_j) \in [0, 1]\) have provide a value of close to 1 for \(\hat s_j\) in the vicinity of \(\hat s_i\) and dropping to 0 for source directions further apart.
+As the transformation \(T\) provides a preferred deflection direction \(\hat g_i = \frac{\del T(\hat s_i, \hat Z_i, E_i)}{\del \hat s_i}\) that can be easily computed (\(T\) is symbolic differentiable) the introduced weights \(\epsilon{}\) are also depending on this deflection direction (introducing a slight asymmetry \(\epsilon_{ij}\neq \epsilon_{ji}\)). The function \(\epsilon(\hat s_i, \hat s) = f(\hat s)\) is 1 for \(\hat s = \hat s_i\) and decreases over a range of \SI{40}{\degree} down to 0 along the deflection direction while decaying much faster perpendicular to it (on a scale of \SI{4}{\degree}). This is implemented using vector algebra and different values of \(\gamma=4.3, 470\) (\(0.1 = \cos^{2\cdot 4.3} (\SI{40}{\degree})= \cos^{2\cdot 470} (\SI{4}{\degree})\)) for the parallel, perpendicular component.
+
+An important aspect of this loss term is the fact that even though \(\epsilon_{ij}\) depends on the source direction parameters its value is regarded as constant with respect to the gradient descent. This leads to the gradient being exactly
+\begin{equation}
+    \frac{\del C_{sphere}}{\del \hat s_i} = \frac1N \sum_j (\epsilon_{ij} + \epsilon_{ji}) (\hat s_i - \hat s_j)
+\end{equation} as it is expected to be. Without this technical detail, the fit would actually profit from moving source directions apart from each other as this decreases \(\epsilon{}\) and therefore the total loss to 0.
+
+\paragraph{Charge Loss}
+
+A third loss component was introduced to exploit the \(X_{\max}\) measurement provided by the \gls{fd} (cf. \refsssec{pao}). Given an atomic mass number \(A\) and an energy \(E\), the observed \(X_{\max}\) follows a broad, asymmetric probability distribution, called the Gumbel function \(G(A, E)\)~\cite{esf33}. Because the distribution is so broad the information gain is quite small but existent as we will see. To successfully exploit this data it is important to not naively fit the charges \(\hat Z_i \approx \frac{\hat A_i}2\) in a way such that the Gumbel function \(G(\hat A_i, E_i)\) has its maximum at \(X_{\max, i}\) as this would be a logical error regarding conditional probabilities. Instead, the decision was made to evaluate the \(\chi_N^2\)-distribution of the measured \(X_{\max, i}\) with respect to the fitted value \(\hat A_i\) and the resulting Gumbel function \(G(\hat A_i, E_i)\). The resulting loss is
+\begin{equation}
+    Q = {\left [ \frac{\chi^2_N}N - 1\right]}^2 = {\left [ \frac1N \sum_i \frac{{(X_{\max, i} - \E[G(\hat A_i, E_i)])}^2}{\Var[G(\hat A_i, E_i)]} - 1\right]}^2
+\end{equation}
+with \(\E{}[\cdot]\) and \(\Var{}[\cdot]\) being the expectation value and variance, respectively. It describes the notion that the \(\chi_N^2\) distribution should have a mean value of \(N\).
+
+The resulting total loss used for the fit is the sum of the three components scaled through the use of 2 hyperparameters:
+\begin{equation}\label{eq:magnet-loss}
+    \loss{} = D + \lambda_Q Q + \lambda_C C .
+\end{equation}
+
+\Subsection{Fit Procedure}
+
+The fit of the parameters was done by implementing the complete workflow in TensorFlow~\cite{tf}. The computation of the gradients and the optimization are built-in functionalities of TensorFlow and simplify the training a lot. In contrast to classical \gls{dl} trainings, the parameters were not updated in a batch-wise manner but all at once in every iteration. This decision is not contradicting the usually positive training effects of small batches (cf. \refsssec{graddesc}) as in this case we do not train a neural network with many optimal solutions but fit physical parameters which will exhibit only a few local minima and all being close to the globally best solution (deflection is bounded). For the cluster loss \(C\) and the charge loss \(Q\), it is actually necessary to evaluate each iteration over all data.
+
+Performing a traditional non-stochastic gradient descent allows taking step-sizes of approximately the size of the gradient itself. An average learning rate was approximately 0.1. To increase the speed of convergence a handful of criteria were implemented to dynamically adapt (increase or decrease) the learning rate turning it as high as possible without destabilizing the convergence behavior.
+
+When fitting a large number of arrival directions with the goal of clustering the source directions the charge somehow acts as a mediator between the clustering and the arrival direction reconstruction. A source direction which the clustering loss pulls strongly into one direction needs to be compensated by a change in the charge so that the predicted arrival direction still keeps matching the data. As the charge loss \(Q\) is a very loose constraint on the charges this leads to negative ore extremely large predicted charges. To avoid these deviations artificial upper and lower bounds \(Z_{\max}, Z_{\min}\) were introduced through an additional loss term
+\begin{equation}
+    Q_b = \sum_i {\max(\hat Z_i - Z_{\max}, 0)}^2 + {\max(Z_{\min} - \hat Z_i, 0)}^2
+\end{equation}
+scaled by an additional hyperparameter \(\lambda_b\). However, \(\lambda_b\) did not really need tuning as the goal was to force the charge bounds as a strong constraint, so \(\lambda_b=100 \gg 1\) was sufficient to effectively avoid charges outside of the bounds completely.
+
+The other two hyperparameters \(\lambda_Q=0.1\) and \(\lambda_C=0.01\) were fixed through some simple experimentation and manual hyperparameter tuning. The target was that the set of parameters would produce a fit which converges on a significantly higher loss when performed on an isotropic source scenario compared to an anisotropic scenario (cf.\ next sections). The values worked well for both, the 1-dimensional and spherical scenarios.
+
+For a gradient descent fit producing decent results a good initialization of the parameters is important. As these are depending on the scenario they will be highlighted in the upcoming sections.
+
+\Subsection{Results}
+
+The first section visualizes and inspects the behavior of the fit for the 1-dimensional case. With the deepened understanding of the fit, the spherical scenario with a simple rotation as deflection will reveal the differences between the 1-dimensional and spherical geometry and the change of the cluster loss as introduced in \refssec{fit-architecture}. The final scenario will be the highlight, as it represents a realistic scenario similar to data taken by the \pao{}.
+
+Throughout this chapter, the charges will be shown as color-coded elements, while the size of the elements (bar or dot) represents the energy. The true source positions will be represented through star symbols. The variables \(Z\) and \(s\) represent the true charge and source position with the hat-marked variables being the corresponding fitted values.
+
+\Subsubsection{1-dimensional Scenario}
+
+This toy scenario makes use of dimensionless variables \(s \in [0,1]\) and \(E \in [1,10]\). The charge \(Z \in [0,1], Z_{\min}=0, Z_{\max}=1\) is actually discretized into \(Z= c/26\) for \(c=1,\ldots, 26\).
+
+The first toy data scenarios consist of 10 \glspl{cr} with the source direction, energy and charge being uniformly distributed. The shower depth values \(X_{\max}\) were randomly picked according to the Gumbel function \(G(A=2c, E)\) The observed arrival directions \(p_i\) are computed according to \(T\) from \refeq{sc1}. This leads to an isotropic scenario (\(s\) uniformly distributed) shown in \reffig{1dim-hidden}. The figure also contains the corresponding anisotropic scenario which differs only with respect to the \(s_i\) being all equal to a singular, randomly placed, source position.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/1d-anisotropic}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/1d-isotropic}
+    \end{minipage}
+    \caption{1-dimensional toy scenario of ten \glspl{cr}. Shown are the observed values \(p_i = T(s_i, R_i)\) together with the energy and charge as bar height and color, respectively. The source positions \(s_i\) are shown by star-shaped markers. \emph{Left:} Anisotropic scenario with 10 \glspl{cr} originating from a single source. \emph{Right:} Isotropic case with 10 randomly sampled source positions.}\label{fig:1dim-hidden}
+\end{figure}
+
+Even though the fit has no precise information on the charge \(Z\), the pattern of the energies and arrival directions \(p\) differ greatly between the isotropic and anisotropic scenario, so we expect the fit to easily handle this case.
+
+The initialization of the charges is set fix to 0.5, while the initial source directions are set by inverting the transformation \(T\) to retrieve \(\hat s_{i,0} = p_i - \hat Z_i / E_i\). The number of neighbors that are considered for the clustering loss \(C\) is \(k=10\). Over the course of only 200 iterations, the fit is well converged and the change of the source directions visualized in \reffig{1d-history}. In the case of anisotropy, the fit manages to find the source and corresponding charge values that are well able to explain a clustering of all 10 \glspl{cr}. However, in the isotropic case clustering fails, as the particles cannot be reconstructed from a single source while obeying to the charge limits and the measured \(X_{\max}\) distribution.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/1d-hist-anisotropic}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/1d-hist-isotropic}
+    \end{minipage}
+    \caption{The fitted parameters \(\hat s_i\) shown over the course of the fit. The stars on the left are the original source positions \(s_i\). The color encodes which prediction belongs to which true source position. In both cases, the fit was performed with \(k=10\) neighbors in the cluster term. \emph{Left:} The anisotropic case of 10 \glspl{cr}. The fit successful reduces the pattern alignment into a single source. \emph{Right:} The corresponding isotropic case. The cluster term is not able to bring the source positions in perfect agreement because of the limited charge values.}\label{fig:1d-history}
+\end{figure}
+
+To express this desired behavior in a statistically significant way, this fit was performed for 100 anisotropic and 100 isotropic cases. The quantities \(\Delta Z= \hat Z - Z\) and \(\Delta s = \hat s - s\) are histogrammed over these 100 runs in \reffig{1d-delta} and clearly show that the fitting of charges and source positions works in the anisotropic case while failing in the isotropic one.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/1d-deltaS}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/1d-deltaZ}
+    \end{minipage}
+    \caption{The error of the reconstructed source (\emph{Left}) and the charge (\emph{Right}) are shown for each \gls{cr}. The solid red line represents an average of 100 anisotropic scenarios (10 \glspl{cr} from a single source). The blue dashed histogram marks the average of 100 isotropic scenarios with 10 \glspl{cr} each.}\label{fig:1d-delta}
+\end{figure}
+
+The reason why the exact source direction can be reconstructed in the anisotropic case is actually not completely trivial. The reason lies in the number of \glspl{cr} that get clustered. Through the hard boundaries on the charge in addition to the \(X_{\max}\) constraint, there is for each \gls{cr} a small interval of possible source directions. When multiple \glspl{cr} belong to the same cluster then the source position of these particles can more precisely be reconstructed as it has to lay in the intersection of all the different intervals of each \gls{cr}. This principle is visualized in \reffig{1d-source-reconstruction}. This statement will also hold in the spherical scenarios: The more \glspl{cr} are correctly clustered into a single original source, the more accurate the reconstruction of this position will be. Additionally, the charge gets also more constrained through the source and arrival directions leading to an improved charge reconstruction compared to information gained from \(X_{\max}\).
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \incgfx{width=\textwidth}{fig/1d-source-reco-a}
+    \end{minipage}
+    \ind{}
+    \begin{minipage}{0.45\textwidth}
+        \incgfx{trim={0 0 0 -5},clip,width=\textwidth}{fig/1d-source-reco-b}
+    \end{minipage}
+    \caption{A simple example explaining how the reconstructed source position improves with the number of clustered \glspl{cr}. \emph{Left:} The source position as star and three particles with different charges and energies deflected according to \(T\). \emph{Right:} The dots mark the reconstructed source using the most probable charge obtained from \(X_{\max}\). The horizontal extensions mark reconstructed source positions using a charge varied 1 sigma up- and downwards according to the Gumbel functions. Under the assumption that all the particles originated from the same source the different reconstructed estimates can be combined to get a more precise reconstruction of the true source position.}\label{fig:1d-source-reconstruction}
+\end{figure}
+
+The fully anisotropic case is of course extremely unrealistic. We actually want to quantize how well this method can discriminate a noisy, yet anisotropic scenario from an isotropic one. For this purpose, three scenarios with 100 \glspl{cr} were constructed. One was again fully isotropic, while one was fully anisotropic, meaning all \glspl{cr} originate from a single source. The third scenario contains 50 \glspl{cr} originating from a single source overlayed with 50 isotropic \glspl{cr} as noise. As a discriminating value, the converged loss was used. Fig.~\ref{fig:1d-loss} shows histograms of these objective values (each scenario was run 100 times), where the scale is normalized to the largest value, as the absolute value does not contain any information. Though still half of the \glspl{cr} contain an anisotropic signal the loss values start already to significantly overlap. However, one has to consider that the pattern is almost unrecognizable for humans as the arrival directions of the 100 \glspl{cr} are quite dense positioned in the 1-dimensional case. In the spherical scenario, this situation improves a lot as the deflection will still be along a 1-dimensional locally predominant direction while the \glspl{cr} arrival directions actually distribute along a 2-dimensional surface.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/1d-loss-a}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/1d-loss-b}
+    \end{minipage}
+    \caption{The final, converged loss values \(\loss{}\) from \refeq{magnet-loss} normalized to the largest observed value. For both, the anisotropic and isotropic case, 100 fits were performed to create the histogram. The blue dashed line represents the isotropic case with 100 \glspl{cr}. The red solid histogram is the anisotropic case with (\emph{Left}) 100 \glspl{cr} originating from a single source (\emph{Right}) 50 \glspl{cr} originating from a single source and 50 isotropic \glspl{cr}.}\label{fig:1d-loss}
+\end{figure}
+
+\Subsubsection{Scenario of Spherical Rotation}
+
+In this scenario the source directions are uniformly sampled from the unit sphere whereas the energy is uniformly sampled from the interval \SIrange{40}{100}{\exa{}eV}. The charges \(Z=1, \ldots, 26\) are sampled from a uniform distribution between proton and iron. The applied transformation is \refeq{sc2} and therefore rotates with angles between \(\delta = 0.02 \ldots \SI{1.3}{\radian} \approx 1 \ldots \SI{74}{\degree}\). Again, the corresponding \(X_{\max}\) values are simulated using the Gumbel functions and the arrival directions computed with \(T\) from \refeq{sc2}.
+
+In this setting, a number of 100 \glspl{cr} was used with the fully isotropic case again simply randomly picking a source direction for every single \gls{cr}. The anisotropic scenario consists of 10 sources each emitting 10 \glspl{cr}. The anisotropic scenario is shown in \reffig{zrot-anisotropic}.
+\Figure[opts={width=0.8\textwidth}]{fig/zrot-anisotropic}{Map of arrival directions \(p_i\) based on the source positions (stars), their charge (color) and their energy (size) using the z-rotation \(T\) from \refeq{sc2}. In total there are 10 sources emitting each 10 \glspl{cr}. The energies range between \(E=40\ldots\SI{100}{\exa eV}\).}{zrot-anisotropic}
+
+For the initialization of the parameters \(\hat Z_i\) the Bayes' theorem can be applied to transform any prior probability distribution of \(\hat Z_i\) in combination with \(X_{\max, i}\) into a posterior charge distribution. The average of this posterior distribution was then taken as the charge initialization. The used prior was a uniform distribution \(\hat Z_i = 1, \ldots, 5\). The reason for so low apriori charges is that in general \glspl{cr} with a large rigidity and therefore low charge are less deflected and thus more informative concerning the reconstruction of sources. By assigning apriori low charges to all \glspl{cr} ensures that we do not spoil any of the potential informative \glspl{cr} through a high initial charge value.
+
+The initialization of the \(\hat s_i\) is simply \(p_i\). Even though one could compute the inverse of the transformation \(T\) as was done for the 1-dimensional case, the initialization of \(\hat s_i = p_i\) is much simpler and also applicable for the full scenario, where the inverse of \(T\) is not feasible anymore.
+
+The resulting fit reveals almost perfect results. Figure~\ref{fig:zrot-fit} shows the fit of the anisotropic and the isotropic case. Except for two outliers\footnote{The outliers could not be fitted as they got pulled into the wrong cluster and converged into a local minimum. Local minima are of course always problematic for gradient descent.} all alignment patterns have been contracted to the right source position in the anisotropic case. The reason why this fit works so well is the modified clustering loss for the spherical case as it includes knowledge of the transformation. The clustering is performed over a wider range along the gradients of the transformation. In the case of a rotation around the z-axis, this gradient is exactly parallel to the latitudinal lines. The clustering along these lines happens over longer distances while alignment patterns that are parallel next to each other do not influence each other as their distance vector is perpendicular to the transformation's gradient. As expected the fit is not successful on the isotropic data. As the transformation only performs z-rotations the \glspl{cr} are clustered in a vertical fashion as this is the component that cannot be contracted through the change of the charge.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/zrot-anisotropic-fit}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/zrot-isotropic-fit}
+    \end{minipage}
+
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/zrot-anisotropic-Zfit}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/zrot-isotropic-Zfit}
+    \end{minipage}
+    \caption{Fit results for the spherical scenario with \(T\) being a z-rotation. \emph{Top:} The reconstructed source positions \(\hat s_i\). Charges are denoted by color and the energy by the size. \emph{Bottom:} The reconstructed charge values \(\hat Z_i\) plotted against the true charge \(Z_i\). The grid shows the discrete values of the true charge. \emph{Left:} The anisotropic scenario consisting of 10 sources emitting 10 particles each. \emph{Right:} The isotropic case with 100 \glspl{cr}.}\label{fig:zrot-fit}
+\end{figure}
+
+Again, it is also interesting to see in \reffig{zrot-fit} that the charge reconstruction works in the anisotropic case. In this plot, one can also clearly make out the two outliers. In the isotropic case, the charges are not really reconstructed. However, there is a slight correlation between the predicted label \(\hat Z_i\) and true charge \(Z_i\) visible in the plot because the charge loss \(Q\) actually provides some information on the charge.
+
+In the 1-dimensional case, the converged loss value was used to discriminate between isotropic and anisotropic scenarios. In the 2-dimensional case, a quantity was used which is called top-hat counting~\cite{esf35}. The top-hat count of a \gls{cr} is the number of neighbors (in the space of source directions \(\hat s_i\)) within a certain vicinity. For this analysis, this region was defined by a radial distance of \SI{5}{\degree}. The histogram in \reffig{zrot-tophat} is constructed by taking the top-hat count value for each \gls{cr}. As expected for the anisotropy almost all \glspl{cr} have a top-hat count of 9--11, as by construction the original clusters had exactly 10 emitted particles. In contrast, the isotropic case shows very low top-hat counts not exceeding 4. This measure was extensively used in the evaluation of the upcoming full scenario.
+\Figure[opts={width=0.7\textwidth}]{fig/zrot-tophat}{The red solid line is the histogram of top-hat counting from all \glspl{cr} in the case of the anisotropic scenario (10 sources \`a 10 \glspl{cr}). The blue dashed line is the result of a random isotropic scenario. The top-hat counting was performed over a region around \(\hat s_i\) with a radial distance of \SI{5}{\degree}.}{zrot-tophat}
+
+\Subsubsection{Full Galactic Magnetic Field Scenario}
+
+This scenario was constructed to provide a result that is close to reality. In total 1000 \glspl{cr} are used which follow the energy spectrum from~\cite{esf4} above \(E_{\min} > \SI{40}{\exa eV}\). In the anisotropic scenario, 10\% of the \glspl{cr} came from signal sources. More explicitly, from the 1000 \glspl{cr} 900 were left isotropic while the last 100 were split up into 4 sources each emitting 25 \glspl{cr}. With 1000 \glspl{cr} above \SI{40}{\exa{}eV} this corresponds roughly to the amount of data taken by current experiments like the \pao{}. The charges were taken randomly from between proton and oxygen (\(Z=1, \ldots, 8\)) and the Gumbel functions yield the corresponding \(X_{\max}\) values. The simulation of the arrival directions \(p_i\) was performed using the regular JF12 simulation, instead of the approximated transformation \(T\) provided through a \gls{dnn}.
+A Gaussian smearing of
+\begin{equation}\label{eq:magnet-spread}
+    \sigma = 0.5 \frac{Z}{E/\si{\exa eV}} \si{\radian}
+\end{equation}
+was also applied to the arrival directions accounting for turbulent components in the galactic magnetic field.
+
+A possible scenario is depicted in \reffig{jf12-anisotropic} where the \glspl{cr} stemming from the signal sources are gray shaded. To the left of the figure, the fit result is visualized where the isotropic background is gray. The signal \gls{cr} patterns got well contracted with the clusters being also relatively close to the original source. Using the full magnetic model, however, shows also a new behavior. The earlier scenarios have shown that isotropic \glspl{cr} get also clustered, however, these false clusters were not as strong as the caused by anisotropies. Additionally, the false clusters were equally distributed across the whole map. With the realistic magnetic field there exist extragalactic arrival directions that can be deflected to a large arrival area on Earth. These source directions are said to have a large transparency. On the other hand, there exist arrival directions with a low transparency which is the case when a large source direction space is mapped onto a small region in the Earth's sky. As the fit's goal is to cluster source directions while keeping the arrival direction intact, it moves a lot of the source directions into the regions of high transparency as this automatically clusters the directions while requiring only small adjustments in the exact source position and charge to reconstruct the arrival direction on Earth.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/jf12-anisotropic}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/jf12-anisotropic-fit}
+    \end{minipage}
+    \caption{\emph{Left:} The arrival directions \(p_i\) of 1000 \glspl{cr} (900 isotropic, 4 sources \`a 25 \glspl{cr}) in a realistic energy and charge scenario using the JF12 parameterization of the galactic magnetic field. An additional Gaussian spread was performed (see \refeq{magnet-spread}). The gray shaded particles originated from the 4 sources (stars). \emph{Right:} The reconstructed source directions \(\hat s_i\) and charges \(\hat Z_i\). The gray \glspl{cr} are the isotropic background.}\label{fig:jf12-anisotropic}
+\end{figure}
+
+Because of the changing transparency of the magnetic field the top-hat counting would not give the right impression of the clustering when applying in the same way as it was done for the rotational transformation. To correct for this effect a map was constructed measuring the average top-hat count \(\langle N_s^\text{iso} \rangle{}\) in the case of an isotropic scenario with 1000 \glspl{cr}. With this quantity it is possible to measure a relative top-hat counting \(N_{\hat s_i} / \langle N_{\hat s_i}^\text{iso}\rangle{}\) which is histogrammed for the presented anisotropic case and an isotropic one in \reffig{jf12-reltophat}.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/jf12-rel-tophat}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/jf12-source-reco}
+    \end{minipage}
+    \caption{\emph{Left:} The relative top-hat countings histogrammed over all \glspl{cr}. The black dashed line marks the threshold value of 5 above which isotropic scenarios rarely produce any entries. The presented anisotropic scenario has a significant amount of \glspl{cr} with a relative top-hat count larger than 5. \emph{Right:} The arrival map filtered for all \glspl{cr} with a relative top-hat count larger than 5. The size represents the relative top-hat counting. The red markers represent signal \glspl{cr} whereas the gray symbols are isotropic background.}\label{fig:jf12-reltophat}
+\end{figure}
+
+As expected, the anisotropic scenario has many \glspl{cr} that have a relative top-hat count larger than 5 while the isotropy barely produces any \glspl{cr} with \(N_s / \langle N_s^\text{iso}\rangle > 5\). Based on this observation a threshold of 5 was used for further investigations of significant clustering. As an example, it is now possible to only visualize source positions in the fitted map that exceed the relative top-hat count of 5. This map is shown in \reffig{jf12-reltophat} with the size corresponding to the relative top-hat counting. The color indicates whether the \gls{cr} originated from a source or from the isotropic background. Almost all signal \glspl{cr} contribute to some significant clustering and are close to the true source position. Only very few clusters of background \glspl{cr} are visible all still having a small relative top-hat count.
+
+Finally, we want to evaluate the discrimination power of this method. For this purpose a single test value is needed. The used value is the count of significant \gls{cr} clusterings measured through the number of \glspl{cr} that have a relative top-hat counting exceeding the threshold 5:
+\begin{equation}
+N_{CR} ( N_s / \langle N_s^\text{iso} \rangle > 5) = \left|\left\lbrace i \in \mathbb{N} : \frac{N_{\hat s_i}}{\langle N_{\hat s_i}^\text{iso} \rangle} > 5 \right\rbrace\right|
+\end{equation}
+The distribution of these test values is shown for 50 anisotropic scenarios (red curve) and 500 isotropic scenarios (blue-dotted curve) in \reffig{jf12-significance}. The median test value for an anisotropic case is roughly around 93 which is close to the actual 10\% signal \glspl{cr} out of the 1000. From the 500 isotropic cases only one reported a test value larger than this median. Thus, the expected sensitivity in terms of a \(p\)-value is roughly \(p=\approx \SI{2e-3}{}\) for rejecting the null hypothesis of an isotropic origin. This corresponds to 2.9 standard deviations. The formulated expectation is of course heavily depending on the fraction of signal \glspl{cr} being around 10\%.
+\Figure[opts={width=0.7\textwidth}]{fig/jf12-significance-rel-tophat}{The test value (number of \glspl{cr} with a relative top-hat counting larger than 5) evaluated for 50 anisotropic cases, similar to the one discussed in the previous plots, and 500 isotropic test cases. The median value for the anisotropic cases is around 93. Only 1 out of the 500 isotropic scenarios got a test value larger than that.}{jf12-significance}
+
+\Subsubsection{Summary}
+
+A novel fit method was introduced which reconstructed hidden physics variables \(\hat Z_i\) and \(\hat s_i\) by fitting the predicted observations with actual measurements. A plain mean squared error for the distance loss could be applied as the goal was to reproduce the exact dataset instead of the underlying distribution. This is the reason why the actual fitting part of the architecture is much simpler compared to the first two methods (see \refsec{mcwgan},~\ref{sec:deepsf}) introduced in this thesis.
+
+Instead, one of the main challenges was to translate the physically motivated transformation law \(T\) into a differentiable structure. As it turns out, the transformation \(T\) given by the galactic magnetic field model JF12 can be very well captured by a \gls{dnn} which was trained to reproduce the same results.
+
+The loss function is the heart of this method as it directs the fit to produce the desired results. While the distance loss is straight-forward, the charge loss was carefully constructed to not put a too strong constraint on the parameters. The cluster loss took the deflection direction of the transformation \(T\) into account to cluster only \glspl{cr} that have the potential to originate from the same extragalactic direction.
+
+An important advantage of this method is its flexibility. One can demonstrate this by suggesting some future modifications and improvements:
+\begin{itemize}
+    \item To include additional measurements, e.g.\ a new observable that constrains the charge better, one just needs to add an additional loss term through only a few lines of code.
+    \item In the case of strongly varying uncertainties one could include weights in the distance loss to account for those.
+    \item The cluster loss uses already the direction of the magnetic field to include only favorable cluster constellations. A possible next step would be to also take the predicted charges into account as the current value gives information on how far the source direction can be corrected in each direction through the charge.
+\end{itemize}
+
+Overall this approach has shown promising results with an expected sensitivity of \(p=0.2 \%{}\) for anisotropic scenarios with 10\% signal against isotropy. Additionally, the fitted source directions could give rough hints to the locations of the true sources.

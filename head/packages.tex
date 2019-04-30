@@ -1,0 +1,189 @@
+% !TEX root = ../thesis.tex
+
+% avoiding error "No room for a new \write" caused by 16 streams limit
+\usepackage{morewrites}%
+%
+% additional LaTeX symbols
+\usepackage{latexsym}%
+\usepackage{pifont}%
+% \usepackage{pgfplots}%
+\usepackage{alphalph}%
+%
+% \usepackage[mathlines]{lineno}\linenumbers
+%
+% german and english syllabication. switch via \selectlanguage
+\usepackage[ngerman, english]{babel}%
+%
+% umlaute for mac
+\usepackage[utf8]{inputenc}%
+%
+% sub- and superscript
+%\usepackage{fixltx2e}%
+%
+% blindtext
+\usepackage{lipsum}%
+%
+% basic latex graphic package
+\usepackage{graphics}%
+\usepackage{grffile}
+%
+% extended graphic package
+\usepackage[pdftex]{graphicx}%
+\usepackage[percent]{overpic}%
+
+\usepackage{longtable}
+\usepackage{tabu}
+%
+% e.g. better lines for tables
+\usepackage{booktabs}%
+%
+% multirows in tables
+\usepackage{multirow}%
+%
+% better captions and subcaptions
+\usepackage[bf,format=plain]{caption}%
+\usepackage{subcaption}%
+%
+% open browser on link-click
+\usepackage{url}%
+%
+% better link configuration
+\usepackage[colorlinks=true,linkcolor=black,urlcolor=black,citecolor=black]{hyperref}%
+%
+\usepackage[nottoc]{tocbibind}
+
+% abbreviations
+\usepackage[refpage]{nomencl}%
+\makenomenclature%
+% glossary
+\usepackage[toc,acronyms]{glossaries}
+\makeglossaries%
+\usepackage{imakeidx}
+\makeindex%
+\input{head/gloss.tex}
+% \loadglsentries[main]{head/gloss.tex}%
+%
+\usepackage[
+  backend=biber,
+  giveninits=true,
+  citestyle=numeric-comp,
+  bibstyle=ieee,
+  % natbib=true,
+  sorting=none,
+  maxnames=5,
+  minnames=2,
+]{biblatex}
+\AtEveryBibitem{%
+\clearfield{isbn}
+\ifentrytype{article}{\clearfield{urlyear}\clearfield{url}\clearfield{issn}}{}
+\ifentrytype{book}{\clearfield{urlyear}}{}
+\ifentrytype{techreport}{\clearfield{urlyear}}{}
+\iffieldundef{doi}{}{\clearfield{urlyear}\clearfield{arxivId}\clearfield{archivePrefix}\clearfield{eprint}}
+\ifthenelse{\equal{arxiv}{\thefield{eprinttype}}}{
+  \ifthenelse{\isin{\strfield{url}}{arxiv}}{\clearfield{url}}{}
+}{}
+% \iffieldundef{arxiv}{}{\clearfield{journal}}
+}
+\addbibresource{bib/Masterthesis.bib}
+\addbibresource{bib/bib.bib}
+%
+% natbib
+% \usepackage[numbers,sort&compress,square,comma]{natbib}%
+% \bibliographystyle{bib/customdavid}%
+% \bibliographystyle{bib/utphys}%
+% \bibliographystyle{bib/custom_utphys}%
+% \bibliographystyle{plain}
+%
+% floating figures and thinner margins
+\usepackage{float}%
+%
+% better header and footer configurations
+\usepackage{fancyhdr}%
+%
+% feynman graphs
+\usepackage[batch]{feynmp}%
+\usepackage{feynmp-auto}%
+%
+% set line spacings
+\usepackage{setspace}%
+%
+% if-then-else structures
+\usepackage{ifthen}%
+%
+% keyval support
+\usepackage{keyval}%
+%
+% landscape support
+\usepackage{rotating}%
+\usepackage{lscape}%
+%
+% delimiters in tables
+\usepackage{bigdelim}%
+%
+% column alignment in tables
+\usepackage{dcolumn}%
+%
+% slashes through characters
+\usepackage{cancel}%
+%
+% page margins
+% \usepackage[twoside,includeheadfoot,top=1.5cm,bottom=1.5cm,left=3.5cm,right=2.5cm]{geometry}%
+\usepackage[twoside,includeheadfoot,top=1.5cm,bottom=1.5cm,left=3cm,right=3cm]{geometry}%
+%
+% math symbols
+\usepackage{amsmath}%
+\usepackage{amssymb}%
+\usepackage{mathrsfs}%
+\usepackage{bm}%
+%
+% more bold characters (like numbers)
+\usepackage{bbold}%
+%
+% better vector arrows
+\usepackage{esvect}%
+%
+% colored table cells
+\usepackage[table]{xcolor}%
+%
+% better itemize and enums
+\usepackage{paralist}%
+\usepackage{enumitem}%
+%
+\usepackage[binary-units=true]{siunitx}%
+\sisetup{
+  separate-uncertainty = true,
+  range-units = single,
+  range-phrase = --,
+}
+\DeclareSIUnit\lumi{\per\cm\squared\per\second}
+
+\usepackage{physics}
+\usepackage{cancel}
+\usepackage{xfrac}
+
+\usepackage[noabbrev]{cleveref}
+
+\usepackage[textsize=tiny,obeyFinal]{todonotes}%
+%
+% code listings
+\usepackage{listings}%
+%
+% better listings
+\usepackage{minted}%
+%
+% better quotes
+\usepackage{csquotes}%
+%
+% pdf page inclusion
+\usepackage{pdfpages}%
+%
+% needed FloatBarrier
+\usepackage{placeins}%
+%
+%
+% used for standard model diagram
+\usepackage{tikz}
+\usetikzlibrary{calc,positioning,shadows.blur,decorations.pathreplacing}
+\usepackage{etoolbox}
+%
+% EOF

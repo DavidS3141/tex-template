@@ -1,0 +1,189 @@
+% !TEX root = ../../thesis.tex
+
+\Section{Deep Learning}\label{sec:deeplearning}
+
+For a few years now, \gls{ml} concepts like \glspl{bdt} and shallow \glspl{ann} have been used to develop powerful physics analyses. The essence of \gls{ml} is to build generic models with many tunable parameters and find a good set of parameter values to describe some desired function that is intractable to implement explicitly. Instead, this function is usually indirectly described by a large dataset, called training data, consisting of the input data of the function and the corresponding desired output, called the label of the input. The parameter solution of the model is usually found not only by using massive datasets but also the fast computation speed that modern computers offer and state-of-the-art optimization techniques to direct the search.
+
+\gls{dl} is a subfield of \gls{ml} and focuses on \glspl{ann} with multiple layers. This area of research became very popular around 2010 with the rediscovery of \glspl{cnn}, the \glspl{relu} as activation function and the use of \glspl{gpu} for parallel and therefore faster optimization. The following sections introduce and explain the most important aspects of \gls{dl} used throughout this thesis.
+
+\Subsection{Basics}
+
+This section provides an overview of the most fundamental aspects of evaluating and training an \gls{ann}.
+
+\Subsubsection{Networks}
+\glspl{ann} are generic models with many parameters that are loosely inspired by the basic inner workings of human brains.
+
+An \gls{ann} usually consists of artificial neurons, often called nodes or perceptrons, and of connections between those nodes which model the synapses of the brain. The nodes are most of the time not parameterized by any numbers but may differ by an internal activation function \(g(x)\), which is often taken to be the same for all nodes in the network. The connections are associated with a single real parameter, called the weight of the connection.
+
+A single node, as shown in \reffig{perceptron}, has many input nodes and a single output value. The output value \(a_{out}\) is computed by taking the activation values of the incoming nodes \(a_i\) multiplied by the connection weights \(w_i\) and summed up to one real number \(z\). This is fed into the activation function \(a_{out} = g(z)\) of the node and results in the final activation of the node which in turn is then used by the connected nodes following this one. The activation function is an important part of an \gls{ann} as it is the only part that introduces a non-linearity. Without its presence, the chaining of nodes would still result in an overall linear transformation and therefore inhibit an overall complex mapping from the input to the output. For a similar reason, the so-called bias \(b\) of a node is also essential. Through the created constant offset in the input of the activation function, it gives each node the ability to move the region of the non-linearity into the right position with respect to the average of the other incoming activations.
+
+\Figure[opts={width=0.5\textwidth}, fileExt=png]{fig/perceptron}{A simple node of an \gls{ann} and its inner workings.~\cite{perceptron-source}}{perceptron}
+
+Nowadays there are many different architectures combining many nodes and connections into larger networks which are capable of representing any functional dependence by adjusting the weight parameters accordingly.
+
+One common and fundamental network architecture is the dense network (see \reffig{dense}). A dense network organizes the nodes into multiple layers which are called input, output or hidden layer depending on their role. The input layer consists of as many nodes as there are dimensions in the input data of the task. Each of these nodes represents a specific variable and takes its value as activation when eval\-u\-a\-ting the network. Following the input layer are some hidden layers each with a certain number of nodes arranged. A node from one layer is connected to all nodes from the previous layer resulting in dense connection patterns giving this architecture its name. The final layer is called the output layer and has as many nodes as the task output has dimensions. After evaluating the network from the input layer through the hidden layers to the output layer, the activation of this layer is taken as the network output. The activation function for this output layer is chosen according to the task at hand (classification, regression, etc.) and differs from the activation functions inside the network.
+
+An important remark on this architecture is that the computation can be performed very efficiently using matrix multiplication. This is one of the reasons why \glspl{gpu} boost the runtime of neural networks as they have special circuits for linear algebra operations. Using the index \(l=1\ldots n_l\) to specify the layer one can write down the equation:
+\begin{align}
+    &&a_{i, l+1} &= g\left(b_{i, l} + \sum_j w_{ij,l} \cdot a_{j, l}\right) \\
+    &\Rightarrow &\bm a_{l+1} &= g \left(\bm b_l + W_l \bm a_l \right) \quad \text{with } {(W_l)}_{ij} = w_{ij, l}
+\end{align}
+\Figure[fileExt=jpeg, opts={width=0.7\textwidth}]{fig/dense}{Network layout of a dense architecture.~\cite{dense-source}}{dense}
+
+In the domain of image-like data, the \gls{cnn} is an extremely successful network layout~\cite{cnn}. As it is not used in this thesis I will only point out some important aspects for its success. As high-resolution images have an incredibly high dimensionality (\(\approx \) 1000pxl x 1000pxl x 3 colors) dense network are impractical because of their large amount of parameters. However, most of the time the investigated images have a relatively low information content that could potentially be encoded in much fewer dimensions. The \gls{cnn} is particularly good in reducing the data dimensionality without loss of information by exploiting local correlations and the translational symmetry of images. This symmetry is encoded in each of the convolutional layers by weight-sharing (e.g.\ specific connections have by definition the same weight) and dropping of connections reducing the number of model parameters significantly while retaining a high performance. Multiple convolutional layers are then stacked with each one decreasing the dimensionality (\(=\) number of nodes) and increasing the abstractness of information.
+
+In physics, a common application of \glspl{cnn} is the processing of data from tracker and calorimeter setups which also feature pixel-wise data entries. Since \glspl{cnn} have shown how powerful it can be to exploit prior knowledge of the data there is a growing interest in developing physics-specific networks incorporating physics knowledge like Lorentz-invariance and boosting of four-vectors.
+
+As stated in the beginning, the goal of \gls{dl} is to have a general model (the \gls{dnn}) that can represent any functional dependence. This statement is theoretically proven to be true for the dense layout and a certain class of activation functions in the famous `Universal Approximation Theorem'~\cite{uat}. Subsequently, the next important step is finding these optimal parameters. The following three sections are going to introduce the basic ingredients for network optimization.
+
+\Subsubsection{Loss Functions}\label{sssec:dl-loss}
+
+The parameter optimization is done similar to classical fits using gradient descent over a certain quantity, e.g.\ the sum of squared errors in the case of a linear regression. In \gls{dl} this quantity is called the loss function which is to be minimized. Consequently, large losses encode a bad performance of a network. The scale of the loss is usually chosen to be on the order of 1 with the theoretical minimum for a perfect model set to 0. This convention guarantees that one can use similar hyperparameters\footnote{Hyperparameters are usually numerical values that steer the training but are not part of the \gls{ann}. More on this in \refsssec{hyper}.} in the training of a \gls{dnn}. The two most commonly used loss functions will be presented here.
+
+As for classical regression, the \gls{mse} loss is also used in \gls{dnn} setups. If \(\bm o\in \mathbb{R}^N\) is the output vector of the \gls{dnn} and \(\bm l\in \mathbb{R}^N\) the target vector, or more commonly named the sample label, then the \gls{mse} is defined as \begin{equation}
+     MSE = \frac1{N}{(\bm o - \bm l)}^2 .
+\end{equation} As required by the convention its minimum is given for a perfect match \(\bm o = \bm l\) and evaluating to 0 in this case. The scale of the \gls{mse} behaves approximately quadratic with respect to the scale of the label \(\bm l\). An upcoming section (\ref{sssec:normalization}) will introduce value normalization as an important preprocessing step resulting in \(\bm o, \bm l\) and with them also the \gls{mse} being in the order of 1.
+
+An extremely common task for \gls{dl} not only in physics is classification. In these tasks, one usually has as many output values as there are classes. To obtain a probability vector whose entries sum up to one, a softmax activation is applied to the output vector \(\bm o \in \mathbb{R}^K\). \begin{equation}
+    \bm p = \softmax(\bm o) = \frac{e^{\bm o}}{\sum_i e^{o_i}}
+\end{equation}
+For classification tasks the cross-entropy loss is the most common loss function. The label is a class index \(1 \ldots K\) encoded into a vector of length \(K\) containing a single 1 at the corresponding position with the other entries being 0. This is a so-called one-hot encoding. The loss can then be written as
+\begin{equation}
+    H = - \sum_i l_i \ln p_i = - \bm l \cdot \ln \bm p .
+\end{equation}
+Again this loss behaves according to the convention by being \(0\; \allowbreak(=1 \cdot \ln 1 \allowbreak=\lim_{\epsilon \rightarrow 0} \epsilon \ln \epsilon)\) for a perfect model \(\bm p = \bm l\) and on the scale of 1 in the maximal confused case \(p_i = \frac1K\) (\(H=\ln K {\lesssim} 3\) for \({K\lesssim 20}\)).
+Besides \(\bm p\) having the properties of a discrete probability distribution (\(p_i \geq0\), \(\sum p_i = 1\)) a trained \gls{dnn} actually produces numbers that should be close to the true probability. We can understand this theoretically by looking at input data that could be described as equivalent (\(\bm x_i \approx \bm x_0\), \(i=1\ldots n\)) concerning the classification task at hand. The \gls{dnn} is producing roughly the same output \(\bm p_i \approxeq \bm p_0\) in all these cases as it is expected to generalize well. Based on the training labels \(l_i\) which might actually differ because of noise in the data, one finds the optimal value
+\begin{equation}
+    \bm p_0 = \argmin_{\bm p_0} H = \argmin_{\bm p_0} \sum_{i=1}^n H_i = \argmin_{\bm p_0} \sum_{i=1}^n - \bm l_i \cdot \ln \bm p_0 = \frac1n \sum_{i=1}^n \bm l_i
+\end{equation}
+confirming that the vector \(\bm p_0\) is representing the probability of the class occurrences for a similar input \(\bm x_0\).
+
+An important aspect of losses is also their relative weighting. For example, it is simple to incorporate sample weights which are multiplied with the loss value for each data sample. These weights can be used to indicate which samples are less affected by noise and therefore should stronger influence the training with respect to more noisy data. In classification tasks, they are also often used to compensate the number of class occurrences. This is preferable for the training process as it avoids that the training simply results in an overall constant output with a high accuracy just because the input data consists mostly of samples from one class with all other classes being underrepresented.
+
+Loss functions guide the gradient descent and are therefore extremely important. A carefully chosen loss can be much more effective than hyperparameter tuning or the right network layout.
+
+The gradient descent not only needs a quantity to minimize but also the gradient of this loss with respect to the parameters. In low-dimensional problems, it is often feasible to compute the gradient numerically by evaluating the target function multiple times at different parameter space points. However, this is impossible for a large number of parameters (\glspl{dnn} have 100,000 and more). This is where the backpropagation algorithm comes into play.
+
+\Subsubsection{Backpropagation}\label{sssec:backpropagation}
+
+The backpropagation algorithm allows the efficient computing of symbolic gradients for a lot of parameters and is based on the chain rule for derivatives.
+
+To understand how it works it is helpful to think of the network as a concatenation of multiple small functions taking some inputs and returning a single real number. The input values consist of the parameters \(w\) one wants to tune as well as of outputs from previous function evaluations. The goal is to compute the gradient \(\frac{\del \loss{}}{\del w}\) where \(\loss{}\) is the loss. The numeric value of this derivative is then used for the gradient descent. The way this is done is by going through the network from the output to the input collecting all gradients.
+In the backward pass we receive for each small function building block \(f(w, a_1, a_2,\ldots)\) the numeric value for \(\frac{\del \loss{}}{\del f}\) and with the knowledge of the functional gradients \(\frac{\del f}{\del a_i}\) one can compute \begin{equation}
+    \frac{\del\loss{}}{\del a_i} = \frac{\del\loss{}}{\del f} \cdot \frac{\del f(w, a_i)}{\del a_i}
+\end{equation} by simple multiplication using the chain rule. This gradient is then passed further back until it reaches a network parameter which is updated according to the exact implementation of the gradient descent. This procedure is also depicted in \reffig{backpropagation}.
+
+\Figure[fileExt=png, opts={width=0.7\textwidth}]{fig/backpropagation}{Schematic representation of the backpropagation algorithm. The forward pass of the function block is shown in green. The backward pass using the chain rule is shown in red. The numerical value in the backward pass is the gradient of the loss \(L\) with respect to the forward flowing variable.~\cite{backpropagation-source}}{backpropagation}
+
+In practice, this procedure is realized by a software framework (see \refssec{software}) that has the information of the symbolic gradients for every function used inside an \gls{ann}.
+
+\glspl{ann} and backpropagation methods have been known for some time. One of the main reasons for the recent success of \gls{dl} is the usage of semi-linear activation functions inside the networks. The hyperbolic tangent or the sigmoid activation functions were both very popular choices before 2010. These functions perform not particularly well for deep networks as the gradients are smaller than 1 (for the sigmoid the gradient is smaller than \(\frac14\)). In the backpropagation step, this leads to the vanishing gradient problem for deep networks as these gradients get multiplied with each other and reach the first layers with small gradients. The opposite of this behavior is the exploding gradient problem when gradients larger than 1 are multiplied in the backward pass. Nowadays there are a handful of activation functions\footnote{Common activation functions converging towards the identity for high input values: ReLU, Leaky ReLU, SELU, ELU, SoftPlus} all featuring the identity for high input values and therefore enabling (next to other recent developments) the successful training of deep networks. A very simple yet successful activation is the \gls{relu} \(\relu(x) = \max(0, x)\) which has the additional advantage of being extremely efficient to compute.~\cite{relu}
+
+\Subsubsection{Gradient Descent}\label{sssec:graddesc}
+
+With all the ingredients for the gradient descent (i.e., the loss and the gradient computation) this step itself is in principle simple. However, there are some practical details which are not necessary when working with low-dimensional parameter spaces and small datasets.
+
+As an update step changes millions of parameters at the same time it does not make sense to take the size of this update step to be in the order of the gradient itself. Before applying the gradient it gets multiplied with the learning rate of the training, a very important hyperparameter (see \refsssec{hyper}) which is usually in the order of \(10^{-5}\) to \(10^{-3}\).
+
+Also, because of the typically large datasets that are processed, it is not feasible to compute the gradient over all data points and apply it. Instead one divides the data randomly into smaller batches. Then the gradient is computed on a batch and directly applied before processing the next batch. This is called stochastic gradient descent and has proven to be more successful than the traditional gradient descent. This is not only due to the large datasets but the fact that \glspl{dnn} tend to have quite a large solution space. In this space exist many local minima as well as many regions where the gradient across all data is close to zero, therefore reducing the learning effect. The stochastic effect of batching mitigates these problems and effectively turns the batch size into an additional hyperparameter.
+
+With this ingredient, it is finally possible to train large and complex \glspl{dnn}, however, some more advanced concepts can further improve the training and performance.
+
+\Subsection{Advanced Concepts}
+
+This section will present advanced concepts used in the setups presented by this thesis but which are generally applicable for \glspl{dnn}.
+
+\Subsubsection{Normalization and Initialization}\label{sssec:normalization}
+
+The normalization of data is quite important for \glspl{dnn}. Networks tend to perform better on standard normal-distributed-like data. The input data and regression labels are usually normalized feature-wise to have zero mean and unit variance sometimes applying a logarithmic transformation to reduce the dominant effects of long tails in the respective feature distribution. Additionally, with this general preprocessing rule, a lot of well-tested default values for hyperparameters can be used (e.g.\ learning rate) and will work well without the need of an extensive hyperparameter search.
+
+Also, other technical details profit from data normalization, e.g.\ the initialization of the connection weights. If one would naively initialize all network parameters to an equal value, all subsequent gradient update iterations will behave exactly the same for all parameters. Thus, parameters should be initialized randomly to destroy symmetries in the network. However, the ideal scale for the random values depends strongly on the scale of the input data. The normalization of the data, therefore, eases the initialization of the weights. A very common initialization is the \emph{He initialization}~\cite{heinit} in combination with \glspl{relu} as activation. The \emph{He initialization} of a network weight is
+\begin{equation}
+    w_{ij, l} \sim \mathcal{N}\left(\mu = 0 , \sigma = \sqrt{\frac2{n_l}}\right)
+\end{equation} with \(n_l\) being the number of nodes in the layer \(l\) and \(w_{ij, l}\) being the connection weights from layer \(l\) to \(l+1\).
+
+Both the normalization and initialization are important to reduce the effects of vanishing or exploding gradients. They also make sure that the incredibly large parameter search space can be reached and reasonably used during learning, therefore leveraging the most important advantage that \glspl{dnn} have to offer.
+
+\Subsubsection{Optimizer}
+
+With the development of software frameworks, it became easier to use more advanced learning algorithms, called optimizers, as it became simpler to switch between different implementations. All are based on the principles of gradient descent with the most basic one being the gradient descent itself.
+
+More advanced optimizers often use so-called momentum to also take the history of parameter update steps into account. With \(\Delta \bm w_i\) being the \(i\)-th update step of the weights \(\bm w\) and \(\bm g_i\) being the gradient of the weights with respect to the loss, the update steps are computed as \begin{equation}
+    \Delta \bm w_i = \bm g_i + \alpha \Delta \bm w_{i-1}
+\end{equation} with \(\alpha \) being a number between 0 and 1. This helps the optimizer to overcome regions where the loss is almost constant (\(\bm g_i \approx 0\)) and reduces noise in the update steps resulting from small batches.
+
+Based on the momentum optimizer is the very popular Adam optimizer~\cite{adam}. While employing momentum for multiple internal variables it also takes into account which parameters get larger gradient updates. A parameter that has often evaluated a gradient close to 0 in the past means for the optimizer that its value can be changed without having a negative effect on the already trained samples. Especially, if there is one single event where this weight plays an important role Adam will detect this and do a stronger update of this specific variable. This makes the Adam optimizer a general yet powerful and particularly fast optimizer which is useful in the development process of \glspl{dnn}. However, for training a production-ready network the method of choice is often the basic gradient descent algorithm as it tends to find better solutions in the converged state. On the downside, it is a few orders of magnitude slower.
+
+\Subsubsection{Training and Validation}
+
+\glspl{dnn} are very capable of capturing fine nuances in large datasets. After a good training run, it is not unusual to get a lower loss or higher accuracy than one might have initially expected based on the noise in the data. This phenomenon in \gls{ml} is called overfitting and describes the effect that a model started memorizing single data samples and their corresponding labels. This is counter-productive for a good model which is supposed to be a good generalization of the data. Figure~\ref{fig:overfitting} visualizes the effect and also gives an intuition of why such a model can actually perform worse than a well-generalizing solution.
+\Figure[fileExt=png, opts={width=0.5\textwidth}]{fig/overfitting}{Overfitting: The green line represents an overfitted model to the shown data. It is apparent how a general description would be the black line and therefore perform better on unseen data.~\cite{overfitting-source}}{overfitting}
+
+When presenting the performance of a network it is important to avoid this bias by not reporting the lowest observed loss during training but a loss that was generated using a validation dataset on which no training was performed. Therefore, it is very common to split the dataset into training data and validation data.
+
+The validation set makes it possible to give a reasonable estimation of the model performance after the training and can also indicate whether the model is experiencing severe overfitting or not (cf. \refsssec{earlystop}). The next section introduces some methods that can be applied to pro-actively reduce these issues and therefore produce better generalization results.
+
+\Subsubsection{Regularization}\label{sssec:regu}
+
+Over the past years, multiple successful regularization schemes were developed and are now widely used in the \gls{dl} community. Regularization helps the network to avoid overfitting and focus more on the aspect of generalizing data. This is especially important for sparse or small datasets.
+
+A very intuitive regularization is the adaptation of the network size. By reducing the number of layers and nodes in a network its ability to overfit is reduced. Decreasing the \gls{dnn} size also results in a lower model complexity which could make it impossible for the network to capture some intricate yet general aspect of the data. It is, therefore, more common to construct larger networks and apply additional regularization.
+
+The L2 regularization is a loss term that is easily implemented as it is the sum of squares of all parameters. \begin{equation}
+    \loss{tot} = \loss{} + \lambda_R \cdot \frac12 \sum_i w_i^2
+\end{equation} The strength of this regularization can be tuned using the parameter \(\lambda_R\). The basic principle here is the addition of a second goal (small weights) which is independent of the target goal. As memorization of data should be more difficult to encode than general rules this memory effect is the first that would be traded in to achieve small weights while still retaining an overall good performance through the general rules.
+%
+% Also adding other terms to the loss which have no correlation to the target will have similar regularizing effects for this reason. For example, another possible term would be one that is trying to keep the gradient \(g_i=\frac{\del \loss{}}{w_i}\) of the network small. \begin{equation}
+%     \loss{tot} = \loss{} + \lambda_R \sum_i g_i^2
+% \end{equation} In the first two \gls{dl} setups of this thesis such a gradient penalty is going to be included.
+
+\Subsubsection{Early Stopping}\label{sssec:earlystop}
+
+Another simple way of reducing overfitting issues is a concept called early stopping. When tracking the validation loss (loss evaluated on the validation data) parallel to the training loss, it is possible to determine after which iteration the validation loss is not improving anymore or even getting worse. This point would mark the moment where the network stops successfully generalizing information and starts memorizing the dataset. Figure~\ref{fig:train-valid-curve} depicts such a scenario. By looking at the last few recorded validation loss values one can automatically trigger an early training stop and not only reduce overfitting effects but also effectively reduce the computation time. This is especially useful during hyperparameter searches (see \refsssec{hyper}) where the number of iterations until convergence strongly depends on those parameters. The presented dynamic early stopping allows to stop trainings that would otherwise stay in a converged state for as long as by the user initially specified.
+\Figure[opts={width=0.5\textwidth}]{fig/train-valid-curve}{An example of how the evolution of the loss could look like. In blue, the loss history of the training data is shown and as expected steadily decreases through the use of gradient descent. Around iteration 50 the loss evaluated on the validation data starts to increase signaling that the model starts to overfit on the training data. This would be a good point to stop the training as the model is not learning any new general information.}{train-valid-curve}
+
+\Subsubsection{Hyperparameter Optimization}\label{sssec:hyper}
+
+As the previous sections have shown almost any method or technique comes with its own set of hyperparameters that can be tuned and adjusted to improve the overall training procedure regarding computation speed or accuracy. Hyperparameters of the training are basically all configurable values that are not trained model parameters, like the learning rate, the used optimizer, batch size, regularization strength, network size and the used activation functions inside the network. For most of these, good default values exist that work on a wide range of tasks. Still, by tuning the parameters to get the optimal training procedure with the best accuracy often improves the result with respect to the default settings. This fitting can also be computationally optimized using tools like the python module \emph{skopt}~\cite{skopt} which aims at making good next guesses for hyperparameters by only using a handful of pre-evaluated training runs and their performance values. For the presented models the optimization of hyperparameters was always performed, however, depending on the runtime of the training it is often done manually over one parameter at a time when there is no correlation of hyperparameters to be expected.
+
+
+\Subsubsection{Adversarial Networks}\label{sssec:gan}
+
+\todo{-gan uberarbeiten}
+A quite novel network layout called a \gls{gan}~\cite{gan} was introduced to the \gls{dl} community about 4 years ago. With this publication, two new concepts were introduced. The first concept is about using \glspl{dnn} as functions that can generate random data according to some distribution. The main idea is here simply to feed random values as inputs to the network instead of some specific training data. A popular application is a task of mimicking a given unlabeled data distribution through the network function and its corresponding random input. This is called an unsupervised training task as opposed to supervised learning with the presence and usage of labels.
+
+To train such a generator network one needs some kind of loss function that tells the network how good the currently generated data matches the distribution of the training set. Here is where the second key idea of \glspl{gan} comes into play, an adversarial network. The adversary is basically a complex loss function that is able to say if the generated data looks \emph{real} (e.g.\ similar to the training data) or \emph{fake}. This network has to be trained as well, however, from the formulation of the goal one can already clearly see that this is a simple classification task. As a \gls{gan} variation is used in the first setup and an adversarial approach is followed in the second setup this section will introduce the \gls{gan} in more detail.
+
+Figure~\ref{fig:gan} presents the basic setup of a \gls{gan}. The generator network receives a random noise input following some normalized random distribution (e.g.\ uniform or standard normal distribution). This is called the latent vector or latent space \(P_z\) and is transformed by the generator into a different data distribution parameterized by the weights of the network. The adversary network is a simple discriminator and is trained on the generated data and the training data. The labels are artificially created depending on the data coming from the generated distribution or the training data (\emph{fake} or \emph{real} data). Training the discriminator with the usual classification loss (cross-entropy) \begin{equation}
+    \loss{D} = - \sum_{i \in \text{real}} \ln D_i - \sum_{i \in \text{fake}} \ln (1 - D_i)
+\end{equation} one can use the trained discriminator to formulate the loss for the generator. A theoretical approach to constructing a generator loss can be taken when viewing the process of the adversarial training as a Minimax game. The discriminator tries to determine \emph{real} and \emph{fake} data while the generator is trying to maximally confuse the discriminator. The value of confusion or discrimination can be measured with the discriminator loss which is automatically taken to be minimized by the discriminator.
+Therefore, a sound generator loss would be exactly the negative of this so that the generator actually tries to increase the discriminator loss. As the generator can only influence the \emph{fake} dataset the sum over the real data in the loss is usually dropped as its derivative with respect to the generator weights is 0 leading to the generator loss \begin{equation}
+    \loss{G} = \sum_{i \in \text{fake}} \ln (1 - D_i) = \sum_{z \sim P_z} \ln \left[1 - D(G(z))\right].
+\end{equation}
+In practice, this loss turns out to be not very useful because as soon as the discriminator has some idea of samples that it can safely label as \emph{fake} data these samples receive an extremely low gradient making it impossible for the generator to learn. The first \gls{gan} publication~\cite{gan} directly introduced an ad-hoc improvement of this loss \begin{equation}
+    \loss{G} = - \sum_{z \sim P_z} \ln D(G(z))
+\end{equation} which makes training feasible.
+\Figure[fileExt=png]{fig/GANs}{This diagram explains the basic principles of generative adversarial training with the example of generating images of handwritten digits. A random vector from the latent space is fed into the generator which produces a \emph{fake} image. The discriminator is trained on the \emph{real} training set and the images provided by the generator with the task to discriminate between these two classes.~\cite{gan-source}}{gan}
+
+The training procedure of this network is very similar to standard \glspl{dnn}. The most important difference is that there are two networks whose weights need to be updated according to different loss functions. Effectively another hyperparameter \(n_D\) is introduced describing how many update steps are performed for the discriminator network until the generator does a single training step. This controls the relative power of the discriminator over the generator and is important as a strong discriminator just rejects all generated data whereas a weak discriminator might not provide helpful information at all. A discriminator that is on par with the generator does help to push the \emph{fake} samples closer to the \emph{real} training distribution.
+
+Still, this first version of a \gls{gan} has some weak points. The first setup will actually introduce a modification of this first \gls{gan} and discuss these problems and how they improve in the modified version.
+
+\Subsection{Software}\label{ssec:software}
+
+As discussed in \refsssec{backpropagation}, it is important to have a good software framework that automatically constructs the local gradients of functions which are then used for backpropagation. TensorFlow has become very popular for this task and is shortly introduced.
+
+In physics, there is usually more data processing involved compared to other sciences using \gls{ml}. To organize the \gls{dnn} training as part of a bigger data processing workflow, the frameworks of Luigi and Law are extremely helpful.
+
+\Subsubsection{TensorFlow}
+
+TensorFlow~\cite{tf} is an open-source project started and developed by Google employees which aims at making training of \glspl{dnn} easy and also efficient. It provides a framework that is able to construct symbolic gradients automatically. Additionally, it delivers an optimized interface between the software and the hardware (e.g.\ CPUs and GPUs). This allows users to efficiently use the provided hardware without explicitly writing code for it, therefore accelerating the development cycle of \glspl{dnn}.
+
+The framework implements tools users can use to construct so-called computation graphs. These tools are simple building blocks like matrix multiplication, addition, division. More complex functions do exist, however it is simple to use elementary operations to construct most of the more complex functions one needs. Each block internally encodes the computation used for the data flow through the network but also has knowledge of its local gradient function which is used for the backward pass of the gradients. Additionally, some blocks provide estimated metadata telling TensorFlow how efficient this task can be run on GPUs or CPUs and what the corresponding optimized machine instructions for either of these two platforms are.
+
+\Subsubsection{Luigi and Law}
+\todo{-luigi uberarbeiten}
+
+Luigi~\cite{luigi} is a python open-source software framework developed by employees from Spotify. This tool lets you build up a workflow by chaining smaller tasks. Therefore a task usually consists of a `run' method telling the computer what work should actually be done. Additionally, there is a `require' method that returns a list of task outputs that are required by this task. Finally, it has an `output' method to inform Luigi which output files it should expect to be produced. This framework not only helps to keep the own code modularized and reusable but also automates dependency-resolving, therefore, running a complete analysis is as simple as just executing the last task in the chain. Luigi will then take care of running all tasks that are required while checking if the outputs already exist and consequently do not need to be run again.
+
+Law~\cite{law} is an additional open-source project built upon Luigi and developed by Marcel Rieger explicitly for the purpose of physics analysis. Besides the very useful command line tool, it provides utilities and base tasks that make it simple to use external resources like remote file systems or computing resources.

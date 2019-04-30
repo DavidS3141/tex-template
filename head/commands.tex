@@ -1,0 +1,342 @@
+% !TEX root = ../thesis.tex
+% chktex-file 41
+
+% shortcut => use \abbrev{CMS}{Compact Muon Solenoid}
+\let\abbrev\nomenclature%
+%
+% manual indentation shortcuts => \ind(xs, s, l, xl)
+\newcommand{\indxs}[0]{\hspace*{0.38em}}%
+\newcommand{\inds}[0]{\hspace*{0.75em}}%
+\newcommand{\ind}[0]{\hspace*{1.5em}}%
+\newcommand{\indl}[0]{\hspace*{2em}}%
+\newcommand{\indxl}[0]{\hspace*{3em}}%
+%
+% vertical offset shortucts => \pg(s, l)
+\newcommand{\pgs}[0]{\vspace*{0.125em}}
+\newcommand{\pg}[0]{\vspace*{0.25em}}
+\newcommand{\pgl}[0]{\vspace*{0.33em}}
+%
+% reference shortcuts
+\newcommand{\refsec}[1]{sec.~\ref{sec:#1}}
+\newcommand{\refssec}[1]{sec.~\ref{ssec:#1}}
+\newcommand{\refsssec}[1]{sec.~\ref{sssec:#1}}
+\newcommand{\refapp}[1]{app.~\ref{app:#1}}
+\newcommand{\reffig}[1]{fig.~\ref{fig:#1}}
+\newcommand{\refeq}[1]{eq.~\ref{eq:#1}}
+\newcommand{\reftab}[1]{tab.~\ref{tab:#1}}
+%
+% associate figures with sections
+\renewcommand{\thefigure}{\thesection.\arabic{figure}}%
+%
+% associate tables with sections
+\renewcommand{\thetable}{\thesection.\arabic{table}}%
+%
+% associate equations with sections
+\renewcommand{\theequation}{\thesection.\arabic{equation}}%
+%
+% associate listings with sections
+\renewcommand{\thelisting}{\thesection.\arabic{listing}}
+
+% reset both counters after each section
+\newcommand{\secsep}{\hspace{1em}}%
+\newcommand{\Section}[2][]{%
+    \FloatBarrier%
+    \pageshift{}
+    \thispagestyle{plain}%
+    \setcounter{subsection}{0}%
+    \setcounter{figure}{0}%
+    \setcounter{table}{0}%
+    \setcounter{equation}{0}%
+    \setcounter{listing}{0}
+    \refstepcounter{section}%
+    \ifthenelse{\equal{#1}{}}{\section*{\thesection\secsep#2}}{\section*{\thesection\secsep#1}}%
+    \sectionmark{#2}%
+    \addcontentsline{toc}{section}{\thesection\secsep#2}%
+}%
+\newcommand{\Subsection}[2][]{%
+    \FloatBarrier%
+    \setcounter{subsubsection}{0}%
+    \refstepcounter{subsection}%
+    \ifthenelse{\equal{#1}{}}{\subsection*{\thesubsection\secsep#2}}{\subsection*{\thesubsection\secsep#1}}%
+    \subsectionmark{#2}%
+    \addcontentsline{toc}{subsection}{\thesubsection\secsep#2}%
+}%
+\newcommand{\Subsubsection}[2][]{%
+    % \FloatBarrier%
+    \refstepcounter{subsubsection}%
+    \ifthenelse{\equal{#1}{}}{\subsubsection*{\thesubsubsection\secsep#2}}{\subsubsection*{\thesubsubsection\secsep#1}}%
+    \subsubsectionmark{#2}%
+    \addcontentsline{toc}{subsubsection}{\thesubsubsection\secsep#2}%
+}%
+%
+% shortcut for a simple table
+\newcommand{\Table}[6]{%
+\begin{table}[#1]%
+\begin{center}%
+\begin{tabular}{#5}%
+#6%
+\end{tabular}%
+\caption[#3]{#3#4}%
+\label{#2}%
+\end{center}%
+\end{table}%
+}%
+%
+% shortcut for a simple figure
+\makeatletter
+\define@key{Figure}{pos}{\def\Figure@Pos{#1}}
+\define@key{Figure}{lab}{\def\Figure@Lab{#1}}
+\define@key{Figure}{cap}{\def\Figure@Cap{#1}}
+\define@key{Figure}{shortCap}{\def\Figure@ShortCap{#1}}
+\define@key{Figure}{opts}{\def\Figure@Opts{#1}}
+\define@key{Figure}{file}{\def\Figure@File{#1}}
+\define@key{Figure}{fileExt}{\def\Figure@FileExt{#1}}
+
+\newcommand{\incgfx}[3][pdf]{%
+    \IfFileExists{./#3.#1}%
+        {\expandafter\includegraphics\expandafter[#2]{#3.#1}}% test file found
+        {%
+            \IfFileExists{./#3-nonfinal.#1}%
+                {
+                    \expandafter\includegraphics\expandafter[#2]{#3-nonfinal.#1}%
+                    \caption{non-final}%
+                }% non-final file version exists
+                {%
+                    \expandafter\includegraphics\expandafter[#2]{fig/dummy.pdf}%
+                    \caption{#3.#1}%
+                }% there does not exist anything
+        }% test file not found
+}
+\newcommand{\Figure}[4][]{%
+\setkeys{Figure}{pos=ht!,fileExt=pdf,opts={width=\textwidth},shortCap={#3}}%
+\setkeys{Figure}{#1}%
+% \@ifundefined{Figure@Pos}{\def\Figure@Pos{ht!}}{}%
+% \@ifundefined{Figure@FileExt}{\def\Figure@FileExt{pdf}}{}%
+% \@ifundefined{Figure@Opts}{\def\Figure@Opts{width=\textwidth}}{}%
+% \@ifundefined{Figure@ShortCap}{\def\Figure@ShortCap{#3}}{}%
+\expandafter\figure\expandafter[\Figure@Pos]%
+\begin{center}%
+\incgfx[\Figure@FileExt]{\Figure@Opts}{#2}%
+\caption[\Figure@ShortCap]{#3}%
+\label{fig:#4}%
+\end{center}%
+\endfigure%
+}%
+\makeatother
+
+\newcommand{\Faynman}[5]{
+\vspace{2mm}
+\begin{fmffile}{#1}
+\begin{fmfgraph*} (#2)
+\fmfstraight{}
+\fmfleftn{l}{#3}
+\fmfrightn{r}{#4}
+#5
+\end{fmfgraph*}
+\end{fmffile}
+\vspace{2mm}
+}
+
+% shortcut for a minted code listing
+\newcommand{\Mintedfile}[6]{
+\begin{listing}[#1]
+\begin{center}
+\inputminted{#5}{#6}
+\caption[#2]{#2#3}
+\label{#4}
+\end{center}
+\end{listing}
+}
+
+% optinally adds an empty page between chapters to ensure that new chapters allways start
+% on odd pages
+\newcommand{\pageshift}{
+\FloatBarrier%
+\cleardoublepage{}
+% \newpage
+% \ifodd\thepage%
+% %nothing to do
+% \else
+% \newpage
+% \thispagestyle{empty}
+% \null%
+% \fi
+}%
+%
+% fast equations using align
+\newcommand{\Appendix}[1]{
+\newpage%
+\thispagestyle{plain}%
+\phantomsection%
+#1
+}
+
+% name formatting substitutions
+\newcommand{\pao}{Pierre Auger Observatory}
+\newcommand{\geant}{\textit{GEANT4}}
+\newcommand{\pythiaDelphes}{\textit{Pythia \& Delphes}}
+\newcommand{\pythia}{\textit{Pythia}}
+\newcommand{\delphes}{\textit{Delphes}}
+
+% High energy physics
+\DeclareSIUnit\annum{a}
+\DeclareSIUnit\micron{\micro\metre}
+\DeclareSIUnit\mrad{\milli\rad}
+\DeclareSIUnit\gauss{G}
+\DeclareSIUnit\parsec{pc}
+\DeclareSIUnit\eVperc{\eV\per\clight}
+\DeclareSIUnit\nanobarn{\nano\barn}
+\DeclareSIUnit\picobarn{\pico\barn}
+\DeclareSIUnit\femtobarn{\femto\barn}
+\DeclareSIUnit\attobarn{\atto\barn}
+\DeclareSIUnit\zeptobarn{\zepto\barn}
+\DeclareSIUnit\yoctobarn{\yocto\barn}
+\DeclareSIUnit\nb{\nano\barn}
+\DeclareSIUnit\pb{\pico\barn}
+\DeclareSIUnit\fb{\femto\barn}
+\DeclareSIUnit\ab{\atto\barn}
+\DeclareSIUnit\zb{\zepto\barn}
+\DeclareSIUnit\yb{\yocto\barn}
+
+% some math commands
+\DeclareMathOperator\arctanh{arctanh}
+\DeclareMathOperator\sgn{sgn}
+\DeclareMathOperator\relu{relu}
+\DeclareMathOperator\softmax{softmax}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator\Var{Var}
+\DeclareMathOperator\E{E}
+
+\newcommand{\iu}{\mathrm{i}\mkern1mu}
+\newcommand{\loss}[1]{\mathcal{L}_{#1}}
+\newcommand{\del}{\partial}
+\newcommand{\cdel}{\cancel{\partial}}
+\newcommand{\dagg}[2][\mu]{i \gamma^#1 #2_#1}
+\newcommand{\vect}[2][pmatrix]{\begin{#1}\mqty{#2}\end{#1}}
+\newcommand{\HH}{di-Higgs}
+\newcommand{\bref}[1]{(see \cref{#1})}
+
+\newcommand{\s}[1]{\acrlong*{#1}}
+\newcommand{\p}[1]{\acrlongpl*{#1}}
+\newcommand{\eg}{e.g.\ }
+\newcommand{\SF}[1]{SF_\text{#1}}
+\newcommand{\pp}[4]{{/home/bfis/mnt/lx3a24/public/analyses/DiHiggs/#1/RunIISummer16MiniAODv2_80X/#2/#3/pdf/#4}.pdf}
+
+
+% particle zoo graph
+% Standard model of physics
+% Author: Carsten Burgard; Edit: Dennis Noll
+\tikzset{%
+        brace/.style = { decorate, decoration={brace, amplitude=5pt} },
+       mbrace/.style = { decorate, decoration={brace, amplitude=5pt, mirror} },
+        label/.style = { black, midway, scale=0.5, align=center },
+     toplabel/.style = { label, above=.5em, anchor=south },
+    leftlabel/.style = { label,rotate=-90,left=.5em,anchor=north },
+  bottomlabel/.style = { label, below=.5em, anchor=north },
+        force/.style = { rotate=-90,scale=0.4 },
+        round/.style = { rounded corners=2mm },
+       legend/.style = { right,scale=0.4 },
+        nosep/.style = { inner sep=0pt },
+   generation/.style = { anchor=base }
+}
+
+\newcommand\particle[7][white]{%
+  \begin{tikzpicture}[x=1cm, y=1cm]
+    \path[fill=#1,blur shadow={shadow blur steps=5}] (0.1,0) -- (0.9,0)
+        arc (90:0:1mm) -- (1.0,-0.9) arc (0:-90:1mm) -- (0.1,-1.0)
+        arc (-90:-180:1mm) -- (0,-0.1) arc(180:90:1mm) -- cycle;
+    \ifstrempty{#7}{}{\path[fill=purple!50!white]
+        (0.6,0) --(0.7,0) -- (1.0,-0.3) -- (1.0,-0.4);}
+    \ifstrempty{#6}{}{\path[fill=green!50!black!50] (0.7,0) -- (0.9,0)
+        arc (90:0:1mm) -- (1.0,-0.3);}
+    \ifstrempty{#5}{}{\path[fill=orange!50!white] (1.0,-0.7) -- (1.0,-0.9)
+        arc (0:-90:1mm) -- (0.7,-1.0);}
+    \draw[\ifstrempty{#2}{dashed}{black}] (0.1,0) -- (0.9,0)
+        arc (90:0:1mm) -- (1.0,-0.9) arc (0:-90:1mm) -- (0.1,-1.0)
+        arc (-90:-180:1mm) -- (0,-0.1) arc(180:90:1mm) -- cycle;
+    \ifstrempty{#7}{}{\node at(0.825,-0.175) [rotate=-45,scale=0.2] {#7};}
+    \ifstrempty{#6}{}{\node at(0.9,-0.1)  [nosep,scale=0.17] {#6};}
+    \ifstrempty{#5}{}{\node at(0.9,-0.9)  [nosep,scale=0.2] {#5};}
+    \ifstrempty{#4}{}{\node at(0.1,-0.1)  [nosep,anchor=west,scale=0.25]{#4};}
+    \ifstrempty{#3}{}{\node at(0.1,-0.85) [nosep,anchor=west,scale=0.3] {#3};}
+    \ifstrempty{#2}{}{\node at(0.1,-0.5)  [nosep,anchor=west,scale=1.5] {#2};}
+  \end{tikzpicture}
+}
+
+\newcommand{\drawparticlezoo}{
+    \centering
+    \resizebox{0.9\textwidth}{!}{
+
+    \begin{tikzpicture}[x=1.2cm, y=1.2cm]
+      \draw[round] (-0.5,0.5) rectangle (3.6,-1.5);
+      \draw[round] (-0.6,0.6) rectangle (4.0,-2.5);
+      \draw[round] (-0.7,0.7) rectangle (4.5,-3.5);
+
+      \node at(0, 0)   {\particle[gray!20!white]
+                       {$u$}        {up}       {$2.3$ MeV}{1/2}{$2/3$}{ }};
+      \node at(0,-1)   {\particle[gray!20!white]
+                       {$d$}        {down}    {$4.8$ MeV}{1/2}{$-1/3$}{ }};
+      \node at(0,-2)   {\particle[gray!20!white]
+                       {$e$}        {electron}       {$511$ keV}{1/2}{$-1$}{}};
+      \node at(0,-3)   {\particle[gray!20!white]
+                       {$\nu_e$}    {$e$~neutrino}         {$<2$ eV}{1/2}{}{}};
+      \node at(1, 0)   {\particle
+                       {$c$}        {charm}   {$1.28$ GeV}{1/2}{$2/3$}{ }};
+      \node at(1,-1)   {\particle
+                       {$s$}        {strange}  {$95$ MeV}{1/2}{$-1/3$}{ }};
+      \node at(1,-2)   {\particle
+                       {$\mu$}      {muon}         {$105.7$ MeV}{1/2}{$-1$}{}};
+      \node at(1,-3)   {\particle
+                       {$\nu_\mu$}  {$\mu$~neutrino}    {$<190$ keV}{1/2}{}{}};
+      \node at(2, 0)   {\particle
+                       {$t$}        {top}    {$173.2$ GeV}{1/2}{$2/3$}{ }};
+      \node at(2,-1)   {\particle
+                       {$b$}        {bottom}  {$4.7$ GeV}{1/2}{$-1/3$}{ }};
+      \node at(2,-2)   {\particle
+                       {$\tau$}     {tau}          {$1.777$ GeV}{1/2}{$-1$}{}};
+      \node at(2,-3)   {\particle
+                       {$\nu_\tau$} {$\tau$~neutrino}  {$<18.2$ MeV}{1/2}{}{}};
+      \node at(3,-3)   {\particle[orange!20!white]
+                       {$W^{\hspace{-.3ex}\scalebox{.5}{$\pm$}}$}
+                                    {}              {$80.4$ GeV}{1}{$\pm1$}{}};
+      \node at(4,-3)   {\particle[orange!20!white]
+                       {$Z$}        {}                    {$91.2$ GeV}{1}{}{}};
+      \node at(3,-2) {\particle[green!50!black!20]
+                       {$\gamma$}   {photon}                        {}{1}{}{}};
+      \node at(3,-1) {\particle[purple!20!white]
+                       {$g$}        {gluon}                    {}{1}{}{ }};
+      \node at(5.0,0)    {\particle[gray!50!white]
+                       {$H$}        {Higgs}              {$125.1$ GeV}{0}{}{}};
+
+      \node at(3.7,-0.5) [force]      {strong force (color)};
+      \node at(4.1,-1.5) [force]    {electromagnetic force (charge)};
+      \node at(4.6,-2.4) [force] {weak force (weak isospin)};
+
+      \draw [<-] (2.5,0.3)   -- (2.7,0.3)          node [legend] {charge};
+      \draw [<-] (2.5,0.15)  -- (2.7,0.15)         node [legend] {color charged};
+      \draw [<-] (2.05,0.25) -- (2.3,0) -- (2.7,0) node [legend]   {mass};
+      \draw [<-] (2.5,-0.3)  -- (2.7,-0.3)         node [legend]   {spin};
+
+      \draw [mbrace] (-0.8,0.5)  -- (-0.8,-1.5)
+                     node[leftlabel] {6 quarks\\(+6 anti-quarks)};
+      \draw [mbrace] (-0.8,-1.5) -- (-0.8,-3.5)
+                     node[leftlabel] {6 leptons\\(+6 anti-leptons)};
+      \draw [mbrace] (-0.5,-3.6) -- (2.5,-3.6)
+                     node[bottomlabel]
+                     {12 fermions\\(+12 anti-fermions)\\increasing mass $\to$};
+      \draw [mbrace] (2.5,-3.6) -- (5.5,-3.6)
+                     node[bottomlabel] {13 bosons\\(eight gluons)};
+
+      \draw [brace] (-0.5,.8) -- (0.5,.8) node[toplabel]         {standard matter};
+      \draw [brace] (0.5,.8)  -- (2.5,.8) node[toplabel]         {unstable matter};
+      \draw [brace] (2.5,.8)  -- (4.5,.8) node[toplabel]          {force carriers};
+      \draw [brace] (4.5,.8)  -- (5.5,.8) node[toplabel]       {Higgs\\sector};
+
+      \node at (0,1.2)   [generation] {1\tiny st};
+      \node at (1,1.2)   [generation] {2\tiny nd};
+      \node at (2,1.2)   [generation] {3\tiny rd};
+      \node at (2.8,1.2) [generation] {\tiny generation};
+    \end{tikzpicture}
+    }
+}

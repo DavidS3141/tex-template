@@ -1,0 +1,45 @@
+% !TEX root = ../../thesis.tex
+
+\section{Bins and Selection Cuts for b-tagging SFs}\label{app:sf-binning}
+
+\begin{table}[ht!]
+    \centering
+    \begin{tabular}{ccc}
+        & light flavor region & heavy flavor region \\
+        \midrule
+        \midrule
+        \(p_T [\si{\giga eV}]\) & \(20,\,30,\,40,\,60,\,\infty{}\) & \(20,\,30,\,50,\,70,\,100,\,\infty{}\) \\
+        \midrule
+        \(|\eta{}|\) & \(0,\,0.8,\,1.6,\,2.4\) & \(0,\,2.4\) \\
+        \midrule
+        CSV & \(-2.01, 0.0, 0.0254, 0.0508,\) & \(-2.01, 0.0, 0.0254, 0.0508,\)\\
+        & \(0.0762,\, 0.1016,\, 0.127,\, 0.1522,\) & \(0.0762,\, 0.1016,\, 0.127,\, 0.1522,\)\\
+        & \(0.2205,\, 0.2889,\, 0.3573,\, 0.4257,\) & \(0.2205,\, 0.2889,\, 0.3573,\, 0.4257,\) \\
+        & \(0.4941,\, 0.5961,\, 0.6981,\, 0.8001,\) & \(0.4941,\, 0.5553,\, 0.6165,\, 0.6777,\)\\
+        & \(0.835,\, 0.87,\, 0.905,\, 0.94,\) & \(0.7389,\, 0.8001,\, 0.842,\, 0.884,\)\\
+        & \(0.975,\, 1.01\) & \(0.926,\, 0.968,\, 1.01\)
+    \end{tabular}
+    \caption{Binning used for the traditional \glspl{sf}.}
+\end{table}
+
+
+\paragraph{Selection Cuts for the Tag \& Probe control region:}
+
+\begin{description}
+    \item[Heavy flavor enriched sample (dileptonic ttbar)]\ \\ % chktex 21
+    \begin{itemize}
+        \item 2 leptons (\(ee/\mu\mu/e\mu{}\)) with opposite charge
+        \item exactly 2 jets
+        \item \(|m_{ll} - 91 | > \SI{10}{\giga eV \per \square c}\) for \(ee/\mu\mu{}\) events
+        \item \(E_T^\text{miss} > \SI{30}{\giga eV}\) for \(ee/\mu\mu{}\) events
+        \item tag jet must pass CSVv2M (medium) working point: \(\text{CSVv2} > 0.800\)
+    \end{itemize}
+    \item[Light flavor enriched sample]\ \\ % chktex 21
+    \begin{itemize}
+        \item 2 leptons (\(ee/\mu\mu{}\)) with opposite charge
+        \item exactly 2 jets
+        \item \(E_T^\text{miss} < \SI{30}{\giga eV}\) for \(ee/\mu\mu{}\) events
+        \item \(|m_{ll} - 91 | < \SI{10}{\giga eV \per \square c}\)
+        \item tag jet must fail CSVv2L (low) working point: \(\text{CSVv2} < 0.460\)
+    \end{itemize}
+\end{description}

@@ -1,0 +1,55 @@
+%%%%%%%%%%%%%%%%%%%%%%%%% USAGE %%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%   Author:     Marcel Rieger, 2012, marcel.rieger@rwth-aachen.de
+%   Rules:      - Begin new chapters/sections on odd pages
+%               - Begin new chapters/sections with includes as shown below
+%               - Use \Section{} instead of \section{}
+%               - Use the .bib file for bibliography handling
+%               - Heading on even pags:
+%                   - CHAPTER X. SECTIONNAME, aligned left
+%               - Heading on odd pages:
+%                   - Empty on pages where new sections are started
+%                   -  X.Y SUBSECTIONNAME, aligned right
+%
+%   Shortcuts
+%   Figures:        \Figure{position}{width}{label}{caption(w/o fn,etc)}{footnote,etc}{src}
+%   Tables:         \Table{position}{column-model}{label}{caption(w/o fn,etc)}{footnote.etc}{content}
+%   Indentations:   \pgxs or \pgs or \pg or \pgl or \pgxl
+%   Abbrevations:   \abbrev{xyz}{explanation}
+%   Citations:      \cite{citename}
+%   Footnotes 1:    \footnote{text}
+%   Footnotes 2:    \footnotemark [...] \footnotetext{text}
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%
+\documentclass[12pt,twoside,final]{scrartcl}% BCOR=1,625cm compensates the bind correction
+%
+\makeatletter
+\@ifclasswith{scrartcl}{final}{\newif\iffinal\finaltrue}{\newif\iffinal}
+\makeatother
+%
+\input{head/packages.tex}%
+%
+%
+\input{head/commands.tex}%
+%
+%
+\input{head/styles.tex}%
+%
+%
+\renewcommand{\author}{David Josef Schmidt}%
+\renewcommand{\title}{Modern Deep Learning techniques for fitting multi-dimensional data distributions in Particle Physics applications}%
+%
+\begin{document}%
+\input{content/content.tex}%
+% \input{content/main/introduction.tex}
+% \input{content/main/cms.tex}
+% \input{content/main/auger.tex}
+% \input{content/main/deeplearning.tex}%
+% \input{content/main/mc_wgan.tex}%
+% \input{content/main/deepsf.tex}%
+% \input{content/main/magnet.tex}%
+% \input{content/main/conclusion_v2.tex}%
+\end{document}%
+%

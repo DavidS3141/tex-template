@@ -1,0 +1,25 @@
+% !TEX root = ../../thesis.tex
+
+\renewcommand{\headrulewidth}{0pt}%
+\appendix%
+% \begin{appendix}%
+%
+% the real appendix first
+\thispagestyle{plain}%
+% \input{content/aux/activations.tex}
+\input{content/aux/highlevelvars.tex}
+\input{content/aux/sf-binning.tex}
+% \input{content/appendix/content.tex}%
+%
+% \bibliographystyle{ieeetr}
+% \Appendix{\bibliography{bib/bib,bib/Masterthesis}}
+\Appendix{\printbibliography[heading=bibintoc]}
+\Appendix{\printglossaries}
+\iffinal\else
+\Appendix{\listoffigures}
+\Appendix{\listoftables}
+\Appendix{\listoftodos}
+\fi
+%
+% \end{appendix}%
+%

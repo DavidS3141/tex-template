@@ -1,0 +1,34 @@
+% !TEX root = ../thesis.tex
+
+% override the fancyhdr default style
+\pagestyle{fancy}%
+\fancyhead{}%
+\fancyfoot{}%
+%
+% reset the indentation distance of new paragraphs
+\setlength{\parindent}{0cm}%
+\setlength{\parskip}{1ex}
+%
+% fmgraph style
+\DeclareGraphicsRule{*}{mps}{*}{}%
+%
+% overrides the default abbreviations name
+\renewcommand{\nomname}{List of Abbreviations}%
+%
+% fills dots between abbreviation (bold) and explanation
+\renewcommand{\nomlabel}[1]{\textbf{#1}}%
+%
+% page definition for nomencl
+\renewcommand{\pagedeclaration}[1]{\dotfill #1}%
+%
+% change header on even pages
+\renewcommand{\sectionmark}[1]{\markboth{{\thesection~~#1}}{}}%
+%
+% change header on odd pages
+\renewcommand{\subsectionmark}[1]{\markright{{\thesubsection~~#1}}}%
+%
+% enum/itemize distances
+\setlength{\pltopsep}{2mm}%
+\setlength{\plitemsep}{2mm}%
+\setlength\emergencystretch{\hsize}%
+%

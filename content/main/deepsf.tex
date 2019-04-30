@@ -1,0 +1,305 @@
+% !TEX root = ../../thesis.tex
+
+\newcommand{\csv}{\text{CSV}}
+\newcommand{\sfs}{\glspl{sf}}
+
+\Section{Deep Scale Factors}\label{sec:deepsf}
+
+The previous section has shown how difficult it can be to produce high-quality generated events and that much information is extracted out of the correlations between variables. Even the computationally expensive simulations using \textit{GEANT4} are not in perfect agreement with the measured data. Because of this, there are usually different \glspl{sf} and weights applied to the \gls{mc} simulations mostly for correcting specific yields, e.g.\ the b-tagging efficiency. In more recent years analyses do not only use the binary b-tag given by the CSV algorithm and specific working points but started using the continuous CSV output directly. For this purpose, a second set of b-tagging \glspl{sf} was developed specifically correcting the shape of the CSV output distribution. These \glspl{sf} are computed by looking at a well-known and physically well-modeled phase space region in the data and matching the histogram shape of the corresponding \gls{mc} events through the \glspl{sf}. This fit was traditionally done only over a few variables with a coarse binning to avoid low statistics in the computation of the \glspl{sf}. As argued, \gls{dl} can be used to overcome this issue. The following section aims at presenting an alternative approach for computing shape-correcting \glspl{sf} by using a specifically designed \gls{dl} setup.
+
+\Subsection{Generalization}\label{ssec:deepsf-generalization}
+
+The task can be abstracted to fitting a set of generated events to a measured dataset. In mathematical notation it can be written as follows:
+
+Using the notion of phase space densities
+\begin{equation}
+    \rho_A (\bm x) = \sum_{(w_i, \bm x_i) \in A} w_i \cdot \delta(\bm x - \bm x_i)
+\end{equation}
+the goal is to produce a refined version of the generated (fake) data \(\hat \rho_\text{fake} \approx \rho_\text{fake}\) that has every a similar density as the measured (real) data. This can be written as
+\begin{equation}
+    \int_{\Delta V}  \rho_\text{real}(\bm x) d^N \bm x = \int_{\Delta V} \hat\rho_\text{fake}(\bm x) d^N \bm x \quad \text{for all }\Delta V
+\end{equation}
+where \(\Delta V\) is some minimal resolution. This can be called a refinement step and there are two possible ways to approach this.
+
+The first way to approach this would be to slightly change the event variables \(\hat{\bm x}_i(\bm x_i) \approx \bm x_i\) of the generated data on an event-by-event basis leading to
+\begin{equation}
+    \hat\rho_\text{fake}(\bm x) = \sum_{(w_i, \bm x_i) \in \text{fake}} w_i \cdot \delta(\bm x - \hat{\bm x}_i (\bm x_i)).
+\end{equation}
+Without modern \gls{ml} techniques this is very difficult to achieve, however, a slightly modified \gls{gan} approach to the one presented in the previous section could actually achieve such a task. Using a \gls{wgan}, this way of refining simulations was presented in~\cite{wgan-auger} refining data time-traces in the setting of the Pierre Auger experiment.
+
+A second way of reaching the desired effect would be to slightly change the event weights \( (\hat w_i, \bm x_i) = (SF(\bm x_i) \cdot w_i, \bm x_i)\) of the \gls{mc} simulations to better fit the phase space distribution of the measurements. The introduced \glspl{sf} would then be close to 1 and result in
+\begin{equation}
+    \hat\rho_\text{fake}(\bm x) = \sum_{(w_i, \bm x_i) \in \text{fake}} SF(\bm x_i) \cdot w_i \cdot \delta(\bm x - \bm x_i).
+\end{equation}
+This is exactly the way the traditional \glspl{sf} work. However, to compute the \glspl{sf} a discretization over a small number of bins was performed suffering from either a coarse binning (low number of bins) or low statistics inside the bins (high number of bins). A \gls{dl} approach could overcome this issue.
+
+Two main reasons lead to the decision of following the second approach. For the usage of such refined \gls{mc} in analyses, it is important to have manageable uncertainties which can be propagated. The first method makes this potentially very hard. In contrast, \glspl{sf} are already in use and the corresponding uncertainties have been investigated. They are mostly method independent. The other reason is that the second approach is in general much closer to the traditional \glspl{sf}. Therefore, the here presented deep \glspl{sf} can be easily cross-checked and compared against the traditional ones. Through the usage of \glspl{dnn} for the \glspl{sf}, it could even be possible to get physical insights into the current method which could lead to improvements in the old method without completely replacing it. The importance of the last argument is not to be underestimated. Looking at the \glspl{sf} of the last years~\cite{sf-an}\footnote{CMS internal, therefore not shown in this thesis.} one can see that they exhibit strong fluctuations that are hard to explain or motivate. Extending the idea of \glspl{sf} to more variables and removing the binning completely can hopefully improve on this behavior.
+
+\Subsection{DeepSF Architecture}
+
+The basic idea of the deep \glspl{sf} is to let a \gls{dnn} take jet variables as input and produce a corresponding \gls{sf}. This \gls{sf} needs to be multiplied with the regular \gls{mc} weight to get the shape-corrected simulation. The training of this SF-Net is done via a loss function evaluating the difference between \gls{mc} and data. This difference is characterized using a second \gls{dnn} as an adversary similar to the \gls{gan} setup. This adversary is a discriminator trained with the softmax cross-entropy as loss function \todo{- technicality with negative event weights. Maybe footnote and referencing to appendix?}. As shown in \refsssec{dl-loss}, the cross-entropy as loss function has the nice property of guiding the output to converge towards the ratio of the phase space densities between the two distributions at the given data point. In terms of these phase space distributions \(\rho_\text{real}(\bm x)\) and \(\hat\rho_\text{fake}(\bm x) = SF(\bm x) \cdot \rho_\text{fake}(\bm x)\),
+a trained discriminator fulfills approximately
+\begin{equation}
+     D(\bm x) \approx \frac{\rho_\text{real}(\bm x)}{\rho_\text{real}(\bm x) + \hat\rho_\text{fake}(\bm x)}.
+\end{equation}
+Ideally, the gradient for the \gls{sf} should be (omitting the \(\bm x\) dependence)
+\begin{equation}
+    \frac{\del\loss{}}{\del SF} \propto \sgn\left(\frac{\rho_\text{fake}}{\rho_\text{real}}\right) \left(SF\cdot \frac{\rho_\text{fake}}{\rho_\text{real}} - 1\right).
+\end{equation}
+The sign function is not only rigorously correct but also important in the beginning of the training where the discriminator might estimate an overall negative phase space density. Without it, the training would diverge at that point. Writing the above in the equivalent form
+\begin{equation}
+    \frac{\del\loss{}}{\del SF} \propto \left|\frac{\rho_\text{fake}}{\rho_\text{real}}\right| \left(SF - \frac{\rho_\text{real}}{\rho_\text{fake}}\right)
+\end{equation}
+leads to the loss function
+\begin{equation}
+    \loss{} = {\left(SF - \frac{\rho_\text{real}}{\rho_\text{fake}} \right)}^2 \cdot \left|\frac{\rho_\text{fake}}{\rho_\text{real}}\right|.
+\end{equation}
+This derivation makes the assumption that no gradient regarding \(SF\) is propagated through \(\frac{\rho_\text{fake}}{\rho_\text{real}}\) and its inverse. However, this loss cannot be implemented in this manner, as the ratio of the phase space densities can only be computed using the discriminator
+\begin{equation}
+    \frac{\rho_\text{fake}}{\rho_\text{real}} = \frac{1-D}{D} \frac1{SF}
+\end{equation}
+which clearly depends on the \(SF\). This is solved by simply computing the above ratio and applying a gradient stop on it in the computation flow of the software.
+
+With this loss function for the SF-Net, one has all the ingredients to implement the learning framework. It is schematically depicted in \reffig{deepsf-architecture}.
+\Figure{fig/deepsf-architecture}{Diagram sketching roughly the learning setup for the deep \glspl{sf}. The SF-Net takes jet variables of \gls{mc}-generated events as input and produces the corresponding \glspl{sf}. These \glspl{sf} are applied to the \gls{mc} events and result in the rescaled \gls{mc} simulations. The discriminator is trained to differentiate the rescaled \gls{mc} from the training data consisting effectively of the measured data and the subtracted \gls{mc} contamination. The discriminator output \(D\) is then used in the loss function of the SF-Net to improve its output.}{deepsf-architecture}
+
+At this point, one might ask themselves why there is no need for a Wasserstein metric in this setup, i.e., what is the exact difference between the two tasks. On first glance both seem to need an adversary comparing a \emph{fake} and a \emph{real} data distribution. As already pointed out in \refssec{deepsf-generalization}, there are two ways to fit discrete data distributions: Either by changing the weights of single events or by changing the variables of the events effectively moving the events in the phase space. The discussion of the Wasserstein distance showed that the discriminator is not able to produce meaningful gradients for the moving of events as it mainly evaluates the local densities. The Wasserstein distance, on the other hand, did a good job on this, however, it fails to give a hint towards the local densities. With the \glspl{sf} only being able to change the local phase space densities, the discriminator provides exactly the needed network output. The critic would not be able to provide meaningful information on how to adjust the event weight.
+
+\Subsection{Traditional Scale Factors and Data Setup}\label{ssec:tradsf}
+
+This section will shortly introduce the traditional way of computing the b-tagging \glspl{sf} as it was done in~\cite{sf-an}.
+
+\newcommand{\dahf}{\text{Data}_\text{HF}}
+\newcommand{\dalf}{\text{Data}_\text{LF}}
+\newcommand{\mchf}{\text{MC}_\text{HF}}
+\newcommand{\mclf}{\text{MC}_\text{LF}}
+\newcommand{\mchfpure}{\text{MC}_\text{HF,pure}}
+\newcommand{\mchfcont}{\text{MC}_\text{HF,cont}}
+\newcommand{\mclfpure}{\text{MC}_\text{LF,pure}}
+\newcommand{\mclfcont}{\text{MC}_\text{LF,cont}}
+The traditional \glspl{sf} essentially are computed in a heavy-flavor enriched region and a light-flavor enriched one. Additionally, they depend on three event parameters. For both flavor regions, a different binning (see \refapp{sf-binning}) is done in the other three variables \(p_T\), \(\eta \) and CSV\@. In total there are 362 disjunctive bins. As there is no ground truth for the flavor accessible in data, the Tag and Probe method is applied. With corresponding selection cuts (see \refapp{sf-binning}) performed on the data one tries to isolate a region with a high purity of heavy flavor jets by focusing on \(t\bar t \rightarrow l\nu l\nu b \bar b\) events. For the light flavor region, a cut is performed to achieve a pure Z+jets sample. Each of these datasets consists of exactly two jets (one of the cut criteria). By construction, these two have most of the time the same flavor type. The tag jet in the heavy flavor sample needs to pass the CSV medium working point. This results in a high confidence that the probe jet is also a heavy flavor jet even though the CSV algorithm might fail to indicate this. Analogously, the tag jet for light flavor has to fail the low CSV working point.
+
+With this method, we have constructed two datasets of jets \(\dahf{}\) and \(\dalf{}\) with a high purity of the corresponding flavor, however, featuring a relatively wide spectrum of CSV values. This exact same construction can be performed on \gls{mc} to obtain \(\mchf{}\) and \(\mclf{}\).
+
+As the b-tagging \glspl{sf} should only be CSV-shape-changing, a yield normalization needs to be applied beforehand. The normalization was done on the presented datasets and separately for the heavy flavor and light flavor region and for every \(p_T\) and \(\eta{}\) bin. It introduces an additional trigger weight that is applied to the \gls{mc} simulations.
+
+There is still going to be some impurity in the constructed datasets regarding the flavor, which needs to be corrected if the \glspl{sf} should depend on the true \gls{mc} flavor. This is done by simply correcting the data yield using the \gls{mc} dataset and splitting it into a pure and a contamination dataset. The pure \glspl{mc} contain the generated flavor matching the region \(\mchfpure{}\), \(\mclfpure{}\) while the contamination dataset has the opposite flavor and is, therefore, estimating the contamination \(\mchfcont{}\), \(\mclfcont{}\). This enables us to compute the \glspl{sf}:
+\begin{align}
+    \text{HF } SF(\csv{}, p_T, \eta) &= \frac{\dahf{} - \mchfcont{}\cdot \text{LF } SF(\csv{}, p_T, \eta)}{\mchfpure{}}\\[10pt]
+    \text{LF } SF(\csv{}, p_T, \eta) &= \frac{\dalf{} - \mclfcont{} \cdot \text{HF } SF(\csv{}, p_T, \eta)}{\mclfpure{}}
+\end{align}
+As the expressions now depend on \glspl{sf} from the other flavor region they are computed iteratively with their starting value being 1. Experience has shown that this tends to converge quickly.
+\begin{align}
+    \text{HF } SF_i &= \frac{\dahf{} - \mchfcont{}\cdot \text{LF } SF_{i-1}}{\mchfpure{}}\\[10pt]
+    \text{LF } SF_i &= \frac{\dalf{} - \mclfcont{} \cdot \text{HF } SF_{i-1}}{\mclfpure{}}
+\end{align}
+
+Up to this point, everything will be done equivalently for the deep \glspl{sf}. The Deep\gls{sf} approach only substitutes the computation of this last equation, which is still done iteratively. The traditional \glspl{sf} solve these equations by histogramming the data in the numerator (including the contamination) and the \gls{mc} in the denominator. Taking bin-wise the ratio of these values results in a binned version of the \glspl{sf} as it was desired. These are the traditional \glspl{sf}. For the deep \glspl{sf}, the nominator represents the \emph{real} dataset and the denominator the \emph{fake} dataset which needs to be refined by the \glspl{sf}. The training will then deliver the SF-Net representing the functional dependence \(SF_i(\csv{}, p_T, \eta)\).
+
+\Subsection{Training}
+
+As a general network architecture, a DenseNet layout was used for both the discriminator and the SF-Net. For both networks, the same complexity (number of layers and nodes) was used to keep them balanced.
+
+Without regularization, the discriminator network tends to overfit on the data as it needs to perform many more iterations than the SF-Net does. This leads to overall smaller \glspl{sf}. In the overfitted case the discriminator predicts every simulated event as such by producing a low output. The SF-Net consequently reduces the \glspl{sf} down 0.
+
+The SF-Net does not need regularization as it trains on the whole dataset only a few times reducing the danger of overfitting significantly compared to the discriminator. Also, the labels are based on the discriminator output \(D\) which of course varies, therefore, leading to different labels even for the same events.
+
+A good training setup with optimized hyperparameters was found using the python \emph{skopt} module~\cite{skopt}. However, the search has shown that most of the hyperparameters did not affect the performance at all. The learning rate was the only parameter that had a significant impact.
+The following settings were used in the final network:
+\begin{description}
+    \item[Network] 10 layers with 128 nodes each and a leaky \gls{relu} (\(\alpha \)=0.01) as activation.
+    \item[Regularization] The L2 loss from \refsssec{regu} was used with a scaling of \(\lambda_\text{R} = \num{3e-5}\).
+    \item[Optimizer] The Adam optimizer with the default learning rate of 0.001 produced the best results. Additionally, an exponentially decaying learning rate was scheduled with a decay parameter of \(1-\num{3e-5}\) per iteration.
+    \item[Training loop] Each loop fed a data batch with 64 jets into the network. Before every training iteration of the SF-Net, there were 8 iterations performed optimizing the discriminator.
+\end{description}
+
+To further improve stability there were in total 5 SF-Nets trained which only differ through the random initialization of the networks. The deep \glspl{sf} analyzed in the upcoming section are the averages of these 5 SF-Net outputs.
+
+\Subsection{Results}
+
+This section will present the resulting deep \glspl{sf} through a few different representations. Where possible, a comparison is made with respect to the traditional \glspl{sf} as described in \refssec{tradsf}\footnote{As the investigation was focused on the method and not on correctly producing the \glspl{sf} some minor implementation details were left out if they did not contribute to the method working differently. The traditional \glspl{sf} were, therefore, not taken as given, but computed for the specified data and leaving out the same minor implementation details so that only the methods in themselves are compared}\todo{-footnote to long}. Additionally, the iteration of the \gls{sf} computation is not relevant for the method itself. Thus, in order to reduce diverging effects of multiple iterations only the \glspl{sf} from the first iteration are compared.
+
+For the presented results the contamination was subtracted from the data. However, as this technical detail is not important for the method itself, the following discussion will use the word data for the reduced yield including the contamination.
+
+First, a direct comparison will be presented where the deep \glspl{sf} are produced with exactly the same input variables as the ones that were used for the binning in the traditional method. Afterward, the deep \glspl{sf} are extended to more input variables and the effects will be discussed.
+
+\Subsubsection{Comparison to Traditional Scale Factors}
+
+This first comparison will show the results of the DeepSF approach applied to the input variables \(\csv, p_T, \eta{}\). The used CSV algorithm is the DeepCSV which has four probability outputs for \(b\), \(bb\), \(c\), and \(udsg\). If not further specified the sum of \(b\) and \(bb\) is meant: \(\csv = \csv_b + \csv_{bb}\).
+
+In \reffig{deepsf-histos} and \ref{fig:deepsf-histos2} histograms of different variables are presented. The gray shaded area is the distribution of the data which needs to be fitted by the scaled \gls{mc}. The red histogram represents the \gls{mc}-simulated distribution weighted with the traditional \glspl{sf}. The green solid line represents the deep \gls{sf}-weighted \glspl{mc}.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/hist-LF-jet-deepcsv}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/hist-HF-jet-deepcsv}
+    \end{minipage}
+
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/hist-LF-jet-Pt}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/hist-HF-jet-Pt}
+    \end{minipage}
+    % \begin{minipage}{0.49\textwidth}
+    %     \incgfx{width=\textwidth}{fig/hist-LF-jet-Eta}
+    % \end{minipage}
+    % \begin{minipage}{0.49\textwidth}
+    %     \incgfx{width=\textwidth}{fig/hist-HF-jet-Eta}
+    % \end{minipage}
+    %
+    % \begin{minipage}{0.49\textwidth}
+    %     \incgfx{width=\textwidth}{fig/hist-LF-jet-deepcsv-c}
+    % \end{minipage}
+    % \begin{minipage}{0.49\textwidth}
+    %     \incgfx{width=\textwidth}{fig/hist-HF-jet-deepcsv-c}
+    % \end{minipage}
+    \caption{Agreement between data (gray shaded) and scaled \gls{mc} using either the traditional \sfs{} (red) or the deep \sfs{} (green). \emph{Left:} Light flavor sample. \emph{Right:} Heavy flavor sample. \emph{Top:} Histogram over CSV\@. \emph{Bottom:} Histogram over \(p_T\).}\label{fig:deepsf-histos}
+\end{figure}
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/hist-LF-jet-deepcsv-c}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/hist-HF-jet-deepcsv-c}
+    \end{minipage}
+
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/hist-LF-jet-E}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/hist-HF-jet-E}
+    \end{minipage}
+    % \begin{minipage}{0.49\textwidth}
+    %     \incgfx{width=\textwidth}{fig/hist-LF-jet-Eta}
+    % \end{minipage}
+    % \begin{minipage}{0.49\textwidth}
+    %     \incgfx{width=\textwidth}{fig/hist-HF-jet-Eta}
+    % \end{minipage}
+    %
+    % \begin{minipage}{0.49\textwidth}
+    %     \incgfx{width=\textwidth}{fig/hist-LF-jet-deepcsv-c}
+    % \end{minipage}
+    % \begin{minipage}{0.49\textwidth}
+    %     \incgfx{width=\textwidth}{fig/hist-HF-jet-deepcsv-c}
+    % \end{minipage}
+    \caption{Agreement between data (gray shaded) and scaled \gls{mc} using either the traditional \sfs{} (red) or the deep \sfs{} (green). \emph{Left:} Light flavor sample. \emph{Right:} Heavy flavor sample. \emph{Top:} Histogram over \(\csv_c\). \emph{Bottom:} Histogram over energy \(E\).}\label{fig:deepsf-histos2}
+\end{figure}
+\todo{-plots with good latex names}
+
+As one can see an overall good agreement exists between the traditionally scaled \gls{mc}, the deep scaled \gls{mc}, and the measured data. A positive first result is the improved simulation of the \(p_T\) and \(\csv_{c}\) values through the deep \glspl{sf} in the light flavor region, although \(\csv_{c}\) was not even explicitly fitted against. The traditional \glspl{sf} suffered from a particularly low number of only 4 bins in the \(p_T\) range explaining the deficiency for that variable. As the deep \glspl{sf} fit continuously across all variables the corresponding weighted simulation fits better the \(p_T\) distribution of the data.
+
+In the heavy flavor region, the deep \glspl{sf} suffer a little bit from the low statistics in the bin for \(\csv \approx 0\). The explanation for this poor behavior is given through the histogram of the \glspl{sf}.
+
+Fig.~\ref{fig:deepsf-sf-histo} shows the overall distribution of the \gls{sf} values for the two methods. It reveals why the deep \glspl{sf} do not work well in the heavy flavor region. The traditional \glspl{sf} reveal a large amount of \sfs{} smaller than 0 (overflow bin). The SF-Net is obviously not very capable of producing such discrete distributions based on small differences in the \(\csv{}\) input. Further investigations might improve on this behavior. The agreement for the light flavor region is acceptable.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/hist-LF-weighted}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/hist-HF-weighted}
+    \end{minipage}
+    \caption{The histogram of \sfs{} using the \gls{mc} event weights to correctly attributed the importance of each \gls{sf}. \emph{Left:} Light flavor sample. \emph{Right:} Heavy flavor sample.}\label{fig:deepsf-sf-histo}
+\end{figure}
+
+A very common visualization of \sfs{} is shown in \reffig{deepsf-sf-binned}. The traditional \sfs{} are plotted over the CSV output for a certain \(p_T\) and \(\eta{}\) bin. The deep \sfs{} do not have a single value. To provide a meaningful comparison the events were binned according to \(p_T\), \(\eta{}\), and CSV and the statistics of the \sfs{} inside this bin are visualized through the green bands. The deep \sfs{} have a relatively wide distribution even after the binning in the three variables. This shows that the DeepSF approach really makes use of the freedom and not being contained on discrete bins.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/SF-LF-pt3-eta0}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/SF-HF-pt3-eta0}
+    \end{minipage}
+    \incgfx{width=0.3\textwidth}{fig/SF-pt-eta-legend}
+    \caption{Visualization of \gls{sf} shape: Traditional \sfs{} are shown in red. The bin-wise distributions of the deep \sfs{} are shown in green for different percentiles.  \emph{Left:} Light flavor sample in the bin \(\SI{60}{\giga eV} \leq p_T\), \(|\eta| < 0.8\). \emph{Right:} Heavy flavor sample in the bin \(\SI{70}{\giga eV} \leq p_T < \SI{100}{\giga eV}\), \(|\eta| < 2.4\).}\label{fig:deepsf-sf-binned}
+\end{figure}
+
+The deep \sfs{} also allow investigations which have not been possible with the traditional approach. As the SF-Net is a continuous and differentiable mapping from jet variables to \glspl{sf}, a potentially interesting question would be which variables strongly influence the \sfs{}. A measure that could quantify this might be
+\begin{equation}\label{eq:importance}
+    I_X = \frac1{\sum w_i} \sum_{(w_i, \bm x_i) \in \text{fake}} w_i \cdot {\left|\frac{\del SF(\bm x_i)}{\del X}\right|}^2 .
+\end{equation}
+It is important for this measure that the data \(\bm x_i\) is normalized. Otherwise, the higher scaling of variables would just scale the importance value of that variable proportionally.
+
+This `importance' measure for a variable \(X\) is shown in \reffig{importance}. The CSV value has as expected the highest score on this measure.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/SF-grads-LF}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/trad-vars/SF-grads-HF}
+    \end{minipage}
+    \caption{\emph{Importance} value \(I_X\) of the different variables \(X\) as defined by \refeq{importance}. \emph{Left:} Light flavor sample. \emph{Right:} Heavy flavor sample.}\label{fig:importance}
+\end{figure}
+
+\Subsubsection{Extension to more Input Variables}
+
+One of the key advantages of the presented method is that it does not depend on the number of input variables. For the purpose of testing a first extension of these variables, the observables energy \(E\) and \(\phi{}\) where included. Instead of the CSV value, all output values of the deep CSV were used independently: \(\csv_b\), \(\csv_{bb}\), \(\csv_{c}\), \(\csv_{udsg}\)
+
+Figure~\ref{fig:nopu-deepsf-histos} displays again some variable histograms. As one can see the situation neither looks better or worse compared to \reffig{deepsf-histos2}.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/nopu-vars/hist-LF-jet-deepcsv-c}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/nopu-vars/hist-HF-jet-deepcsv-c}
+    \end{minipage}
+
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/nopu-vars/hist-LF-jet-E}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/nopu-vars/hist-HF-jet-E}
+    \end{minipage}
+    \caption{Agreement between data (gray shaded) and scaled \gls{mc} using either the traditional \sfs{} (red) or the deep \sfs{} applied on 8 variables (green). \emph{Left:} Light flavor sample. \emph{Right:} Heavy flavor sample. \emph{Top:} Histogram over \(\csv_c\). \emph{Bottom:} Histogram over energy \(E\).}\label{fig:nopu-deepsf-histos}
+\end{figure}
+
+Also, the histograms of the \sfs{} still match quite well (see \reffig{nopu-deepsf-sf-histo}). As one would expect the tails of the distribution for the deep \sfs{} got a bit longer as with more variables the \sfs{} get more stronger constrained by the data and therefore showing stronger fluctuations.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/nopu-vars/hist-LF-weighted}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/nopu-vars/hist-HF-weighted}
+    \end{minipage}
+    \caption{The histogram of \sfs{} using the \gls{mc} event weights to correctly attributed the importance of each \gls{sf}. The deep \sfs{} are based on 8 input variables. \emph{Left:} Light flavor sample. \emph{Right:} Heavy flavor sample.}\label{fig:nopu-deepsf-sf-histo}
+\end{figure}
+
+The plots of the \sfs{} in the binning of the CSV, \(p_T\) and \(\eta{}\) variables were omitted as they contained no additional insights and look very similar to the ones presented in \reffig{deepsf-sf-binned}. However, the bar diagram with the importance score of the variables has now a few more candidates (see \reffig{nopu-importance}): Surprisingly, a relatively high importance score was assigned to \(\csv_{c}\) for both, the light and heavy flavor case. Also, the energy has gotten a higher score than the traditionally used variable \(\eta{}\) which seems to be as unimportant as the variable \(\phi{}\) which is completely decorrelated from every other variable and contains, therefore, no information at all.
+\begin{figure}[ht!]
+    \centering
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/nopu-vars/SF-grads-LF}
+    \end{minipage}
+    \begin{minipage}{0.49\textwidth}
+        \incgfx{width=\textwidth}{fig/nopu-vars/SF-grads-HF}
+    \end{minipage}
+    \caption{\emph{Importance} value \(I_X\) of the different variables \(X\) as defined by \refeq{importance}. \emph{Left:} Light flavor sample. \emph{Right:} Heavy flavor sample.}\label{fig:nopu-importance}
+\end{figure}
+
+\Subsubsection{Summary and Outlook}
+
+Overall, this section has introduced a new method of computing \sfs{} using \gls{dl} techniques. In certain aspects, the produced deep \sfs{} have  a close resemblance to the traditional \sfs{}, therefore, validating this method.
+
+A real improvement going from 3 to 8 input variables could not be seen. However, this method is flexible and future modifications could provide interesting results. These future investigations could include:
+
+\begin{itemize}
+    \item Introducing further variables that may be more relevant, for example, the input variables of the CSV (e.g., observables based on the secondary vertex).
+
+    \item Using different input variables for the discriminator and the SF-Net. A possibility could be to let the discriminator only fit the CSV distribution while the SF-Net is computing \sfs{} based on additional variables.
+
+    \item Removing the iterative procedure by adding the generated flavor as an input variable to the SF-Net. The training of the networks for heavy flavor and light flavor would happen simultaneously and the traditional iterative procedure would be effectively incorporated into the training iterations.
+
+    \item Adding uncertainties to the computation. Most of the uncertainties from~\cite{sf-an} can be computed in a similar fashion for the deep \sfs{}. As there is no binning involved as well as a reduced issue of low statistics it could be possible that the statistical error is smaller than the traditional counterpart.
+
+    \item Retaining the old method and using the deep \sfs{} to find possibly more important input variables for the traditional method. As a first result, it might be worth looking into how the traditional \sfs{} would behave when they depend on \(\csv_c\), \(p_T\), and \(E\) as these were the most \emph{important} variables as the second part of this section revealed.
+\end{itemize}
+
+In terms of a multi-dimensional fit with \glspl{dnn}, this method worked remarkably well. Compared to the \gls{wgan} it seems that this method was more successful in producing correct variable shapes. The presumed reason is that the generator in the \gls{wgan} has a much harder task to perform. In contrast, the SF-Net was tasked to refine an already well agreeing \gls{mc} simulation through a single weight value only.
